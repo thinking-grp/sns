@@ -17,10 +17,13 @@
   
   <title>thinking SNS</title>
   <link rel="manifest" href="manifest.json">
+
+  <meta name="google-signin-client_id" content="133464509665-5nc30j1sjpo633cpcrft4k59f98u1p73.apps.googleusercontent.com">
 </head>
 <body>
   <div class="loading">
     <div class="load">
+      <div class="box nodisplay"></div>
       <div class="box a hide"></div>
       <div class="box b hide"></div>
       <div class="box c hide"></div>
@@ -82,6 +85,12 @@
     .hide {
       opacity: 0;
       scale: 0;
+    }
+    .nodisplay{
+      height:0px;
+      width:0px;
+      padding:0px;
+      margin:0px;
     }
   </style>
 
