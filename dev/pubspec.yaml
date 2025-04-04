@@ -1,0 +1,37 @@
+name: thinking_sns
+description: A new Flutter project.
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  firebase_core: ^3.12.1
+  cloud_firestore: ^5.0.0
+  firebase_database: ^11.0.0
+  intl: ^0.19.0
+  url_launcher: ^6.2.0
+  flutter_colorpicker: ^1.0.3
+  uuid: ^4.1.0
+  google_fonts: ^6.2.1
+  shared_preferences: ^2.3.0
+  flutter_svg: ^2.0.17
+  firebase_auth: ^5.0.0
+  firebase_auth_web: ^5.14.1
+  google_sign_in: ^6.3.0
+  google_sign_in_web: ^0.12.2
+  figma_squircle: ^0.6.3
+  animations: ^2.0.11
+  should_rebuild: 1.0.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^2.0.0  # 最新バージョンを使用
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/icons/
+    - assets/bgimg/
