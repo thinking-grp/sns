@@ -24,6 +24,7 @@ dependencies:
   figma_squircle: ^0.6.3
   animations: ^2.0.11
   should_rebuild: 1.0.1
+  foundation: ^0.0.5
 
 dev_dependencies:
   flutter_test:
@@ -35,3 +36,4 @@ flutter:
   assets:
     - assets/icons/
     - assets/bgimg/
+    - assets/image/

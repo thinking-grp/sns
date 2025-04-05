@@ -17,6 +17,8 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:figma_squircle/figma_squircle.dart';
 import 'package:animations/animations.dart';
 import 'package:should_rebuild/should_rebuild.dart';
+import 'package:flutter/foundation.dart';
+import 'dart:io';
 
 class AuthState {
   static final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -25,28 +27,37 @@ class AuthState {
     clientId: '133464509665-5nc30j1sjpo633cpcrft4k59f98u1p73.apps.googleusercontent.com',
   );
   static Future<UserCredential?> signInWithGoogle() async {
-    try {
-      // webの確認認証フラッター
+  try {
+    if (kIsWeb) {
+      // Web プラットフォーム用の認証
       final result = await _auth.signInWithPopup(_googleProvider);
-      
-      // 不nullの確認
-      if (result != null) {
-        return result;
+      return result;
+    } else {
+      // モバイル用の認証
+      final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
+      if (googleUser == null) {
+        print('Google Sign-In: ユーザーがキャンセルしました');
+        return null;
       }
-      
-      print('Google Sign In: No credentials returned');
-      return null;
 
-    } catch (e) {
-      print('Google Sign In Error: $e');
-      // エラーデバッグ
-      if (e is FirebaseAuthException) {
-        print('Firebase Auth Error Code: ${e.code}');
-        print('Firebase Auth Error Message: ${e.message}');
-      }
-      return null;
+      final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
+      final OAuthCredential credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+
+      final result = await _auth.signInWithCredential(credential);
+      return result;
     }
+  } catch (e) {
+    print('Google Sign-In Error: $e');
+    if (e is FirebaseAuthException) {
+      print('Firebase Auth Error Code: ${e.code}');
+      print('Firebase Auth Error Message: ${e.message}');
+    }
+    return null;
   }
+}
 
   static Future<void> signOut() async {
     try {
@@ -902,7 +913,7 @@ useBackgroundImage
                       maxLines: isMiniPost ? 1 : null,
                       expands: isMiniPost ? false : true,
                       decoration: InputDecoration(
-                        hintText: isMiniPost ? '3文字で入力...' : '投稿内容を入力...',
+                        hintText: isMiniPost ? '3文字で入力...' : '投稿内容を入力...\n(投稿前にご利用時の注意事項を必ず読んでください。)',
                         border: InputBorder.none, // no border
                         filled: false,         // no bg#
                       ),
@@ -921,28 +932,167 @@ useBackgroundImage
 
   }
 
-  Future<void> _showInfoDialog() async {
-    await showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('ご利用時の注意事項'),
-          content: const Text('データ削除について\n投稿やトークルームは容量管理のため、予告なく削除されることがあります。予めご了承ください。\n\nユーザー名について\nユーザー名は、誰が誰かをわかりやすくするための機能です。誰でも自由にユーザー名を設定できますが、なりすましには十分ご注意ください。\n\n個人情報の保護\n個人情報（氏名、住所、他人の連絡先など）は、絶対に書き込まないでください。\n\nサービス維持について\nサービスの維持に影響を及ぼす可能性があるため、高すぎる頻度での読み込み・リアクション、長すぎる時間でのテキスト通話はご遠慮ください。\n\n運営について\n私たちは利益がないグループで運営しています。そのため、様々な制限の都合により予告なくサービスを一時停止する場合があります。\n\nバグや不具合の報告\nバグや不具合を発見した場合は、投稿を通じてお知らせいただけると助かります。'),
-          actions: <Widget>[
-            TextButton(
-              child: const Text('完了'),
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
+Future<void> _showInfoDialog() async {
+  final PageController pageController = PageController();
+  int currentPageIndex = 0;
+
+  await showGeneralDialog(
+    context: context,
+    barrierDismissible: true,
+    barrierLabel: MaterialLocalizations.of(context).modalBarrierDismissLabel,
+    pageBuilder: (BuildContext context, Animation<double> animation, Animation<double> secondaryAnimation) {
+      return StatefulBuilder(
+        builder: (context, setState) {
+          return Scaffold(
+            body: Column(
+              children: [
+                Expanded(
+                  child: PageView(
+                    controller: pageController,
+                    onPageChanged: (index) {
+                      setState(() {
+                        currentPageIndex = index;
+                      });
+                    },
+                    children: [
+                      // Page 1
+                      Padding(
+                        padding: const EdgeInsets.all(24.0),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              'ユーザー名は\n自由に設定できます',
+                              textAlign: TextAlign.center,
+                              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+    fontWeight: FontWeight.bold,
+  ),
+                            ),
+                            const SizedBox(height: 24),
+                            SizedBox(
+                              width: 260,
+                              height: 260,
+                              child: Image.asset('assets/image/page1.png')
+                            ),
+                            const SizedBox(height: 24),
+                            const Text(
+                              'ユーザー名は、誰が誰かを表示上わかりやすくするための機能です。\n名前が実際の人物とは異なる場合があります。',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(fontSize: 16),
+                            ),
+                          ],
+                        ),
+                      ),
+                      // Page 2
+                      Padding(
+                        padding: const EdgeInsets.all(24.0),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              '安心して利用できる\n環境にしましょう',
+                              textAlign: TextAlign.center,
+                              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+    fontWeight: FontWeight.bold,
+  ),
+                            ),
+                            const SizedBox(height: 24),
+                            SizedBox(
+                              width: 260,
+                              height: 260,
+                              child: Image.asset('assets/image/page2.png')
+                            ),
+                            const SizedBox(height: 24),
+                            const Text(
+                              '個人情報や誰かが不快に思いそう内容は、絶対に書き込まないでください。\nすべての利用者が安心して利用できる環境づくりにご協力ください。',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(fontSize: 16),
+                            ),
+                          ],
+                        ),
+                      ),
+                      // Page 3
+                      Padding(
+                        padding: const EdgeInsets.all(24.0),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              'サービスの維持に\nご協力ください',
+                              textAlign: TextAlign.center,
+                              style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+    fontWeight: FontWeight.bold,
+  ),
+                            ),
+                            const SizedBox(height: 24),
+                            SizedBox(
+                              width: 260,
+                              height: 260,
+                              child: Image.asset('assets/image/page3.png')
+                            ),
+                            const SizedBox(height: 24),
+                            const Text(
+                              '非営利での運営のため、容量の都合により、投稿やトークルームなどが予告なく削除される場合があります。\nまた、高頻度での読み書きや長時間のテキスト通話はご遠慮ください。',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(fontSize: 16),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      FilledButton(
+                        style: ButtonStyle(
+                          backgroundColor: MaterialStateProperty.all(
+                            Theme.of(context).colorScheme.inverseSurface,
+                          ),
+                          padding: MaterialStateProperty.all(
+                            const EdgeInsets.symmetric(vertical: 24.0, horizontal: 48.0),
+                          ),
+                          shape: MaterialStateProperty.all(
+                            RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(30),
+                            ),
+                          ),
+                        ),
+                        onPressed: () {
+                          if (currentPageIndex < 2) {
+                            pageController.nextPage(
+                              duration: const Duration(milliseconds: 300),
+                              curve: Curves.easeInOut,
+                            );
+                          } else {
+                            Navigator.of(context).pop();
+                          }
+                        },
+                        child: Text(
+                          currentPageIndex < 2 ? '次へ' : '完了',
+                          style: TextStyle(
+                            color: Theme.of(context).colorScheme.onInverseSurface,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
-          ],
-        );
-      },
-    );
-  }
+          );
+        },
+      );
+    },
+  );
+}
+
 
   Future<void> _openLink() async {
-    const url = 'https://thinking-grp.github.io/';
+    const url = 'https://thinking-grp.github.io/project/thinkingsns';
     if (await canLaunch(url)) {
       await launch(url);
     } else {
@@ -965,7 +1115,7 @@ Widget _buildMainScreen() {
                 ),
                 TextButton(
                   onPressed: _openLink,
-                  child: const Text('thinkingについて'),
+                  child: const Text('thinking SNSについて'),
                 ),
               ],
             ),
@@ -1129,7 +1279,7 @@ Widget _buildPostList() {
                 ),
                 TextButton(
                   onPressed: _openLink,
-                  child: const Text('thinkingについて'),
+                  child: const Text('thinking SNSについて'),
                 ),
               ],
             ),
@@ -1651,7 +1801,7 @@ Widget _buildProfileScreen() {
                 ),
                 TextButton(
                   onPressed: _openLink,
-                  child: const Text('thinkingについて'),
+                  child: const Text('thinking SNSについて'),
                 ),
               ],
             ),
@@ -1666,7 +1816,19 @@ Widget _buildProfileScreen() {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-if (user == null)
+
+MediaQuery.removeViewInsets(
+  context: context,
+  removeBottom: true, // rebuild yebang
+  child: Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text(
+        'Googleアカウント',
+        style: Theme.of(context).textTheme.titleMedium,
+      ),
+      const SizedBox(height: 4),
+      if (user == null)
   FilledButton(
     style: ButtonStyle(
       backgroundColor: MaterialStateProperty.all(
@@ -1741,7 +1903,9 @@ if (user == null)
   },
   child: const Text('ログアウト'),
 ),
-
+    ],
+  ),
+),
             
           MediaQuery.removeViewInsets(
   context: context,
@@ -2468,13 +2632,14 @@ const double iconSize = 20.0;
 return Hero(
   tag: 'post-${widget.post.id}',
   child: Material(
-    color: Colors.transparent,
+    color: const Color.fromARGB(0, 0, 0, 0),
     child: Card(
+      color: const Color.fromARGB(0, 0, 0, 0),
       elevation: 0, // no shadow
       margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 12), // padding
       child: Container(
         decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(18),
+          borderRadius: BorderRadius.circular(24),
           color: widget.post.backgroundColor,
         ),
         clipBehavior: Clip.antiAlias,
@@ -2483,97 +2648,102 @@ return Hero(
             if (widget.post.backgroundImage != null)
               Positioned.fill(
                 child: ClipRRect(
-                  borderRadius: BorderRadius.circular(18),
+                  borderRadius: BorderRadius.circular(24),
                   child: SvgPicture.asset(
                     widget.post.backgroundImage!,
                     fit: BoxFit.cover,
                   ),
                 ),
               ),
-            InkWell(
-              onTap: () {
-                Navigator.of(context).push(
-                  PageRouteBuilder(
-                    pageBuilder: (context, animation, secondaryAnimation) => PostDetailScreen(
-                      post: widget.post,
-                      onReactionUpdated: widget.onReactionUpdated,
-                    ),
-                    transitionDuration: const Duration(milliseconds: 500),
-                    transitionsBuilder: (context, animation, secondaryAnimation, child) {
-                      return SharedAxisTransition(
-                        animation: animation,
-                        secondaryAnimation: secondaryAnimation,
-                        transitionType: SharedAxisTransitionType.scaled,
-                        child: child,
-                      );
-                    },
-                  ),
-                );
-              },
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      widget.post.username,
-                      style: TextStyle(
-                        color: widget.post.textColor.withOpacity(1),
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
+            // InkWellをMaterialでラップして手前に表示
+            Material(
+              color: Colors.transparent, // Materialの背景を透明に設定
+              child: InkWell(
+                onTap: () {
+                  Navigator.of(context).push(
+                    PageRouteBuilder(
+                      pageBuilder: (context, animation, secondaryAnimation) => PostDetailScreen(
+                        post: widget.post,
+                        onReactionUpdated: widget.onReactionUpdated,
                       ),
-                    ),
-                    const SizedBox(height: 4),
-                    // fix Text を SelectableText 変更
-                    SelectableText(
-                      widget.post.delay ? _displayText : widget.post.text,
-                      style: TextStyle(
-                        color: widget.post.textColor,
-                        fontSize: 16,
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      formattedDate,
-                      style: TextStyle(
-                        color: widget.post.textColor.withOpacity(0.6),
-                        fontSize: 12,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      children: reactionSvgs.entries.map((entry) {
-                        final emoji = entry.key;
-                        final svgPath = entry.value;
-                        final count = widget.post.reactions[emoji] ?? 0;
-                        return Expanded(
-                          child: TextButton(
-                            style: TextButton.styleFrom(
-                              foregroundColor: widget.post.textColor,
-                              padding: EdgeInsets.zero,
-                              minimumSize: Size.zero,
-                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                            ),
-                            onPressed: () {
-                              widget.onReactionUpdated(emoji);
-                            },
-                            child: Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                SvgPicture.asset(
-                                  svgPath,
-                                  width: iconSize,
-                                  height: iconSize,
-                                ),
-                                const SizedBox(width: 4),
-                                Text('$count'),
-                              ],
-                            ),
-                          ),
+                      transitionDuration: const Duration(milliseconds: 500),
+                      transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                        return SharedAxisTransition(
+                          animation: animation,
+                          secondaryAnimation: secondaryAnimation,
+                          transitionType: SharedAxisTransitionType.scaled,
+                          child: child,
                         );
-                      }).toList(),
+                      },
                     ),
-                  ],
+                  );
+                },
+                borderRadius: BorderRadius.circular(24), // ここでborderRadiusを指定
+                child: Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        widget.post.username,
+                        style: TextStyle(
+                          color: widget.post.textColor.withOpacity(1),
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      // fix Text を SelectableText 変更
+                      SelectableText(
+                        widget.post.delay ? _displayText : widget.post.text,
+                        style: TextStyle(
+                          color: widget.post.textColor,
+                          fontSize: 16,
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        formattedDate,
+                        style: TextStyle(
+                          color: widget.post.textColor.withOpacity(0.6),
+                          fontSize: 12,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Row(
+                        children: reactionSvgs.entries.map((entry) {
+                          final emoji = entry.key;
+                          final svgPath = entry.value;
+                          final count = widget.post.reactions[emoji] ?? 0;
+                          return Expanded(
+                            child: TextButton(
+                              style: TextButton.styleFrom(
+                                foregroundColor: widget.post.textColor,
+                                padding: EdgeInsets.zero,
+                                minimumSize: Size.zero,
+                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              ),
+                              onPressed: () {
+                                widget.onReactionUpdated(emoji);
+                              },
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  SvgPicture.asset(
+                                    svgPath,
+                                    width: iconSize,
+                                    height: iconSize,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Text('$count'),
+                                ],
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
@@ -2583,6 +2753,7 @@ return Hero(
     ),
   ),
 );
+
 }
 }
 

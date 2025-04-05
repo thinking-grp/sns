@@ -8,7 +8,7 @@ class MaterialTheme {
   static ColorScheme lightScheme() {
     return const ColorScheme(
       brightness: Brightness.light,
-      primary: Color(0xff5b5f63),
+      primary: Color(0xFF131313),
       surfaceTint: Color(0xff5b5f63),
       onPrimary: Color(0xffffffff),
       primaryContainer: Color(0xffd4d7dc),
@@ -47,11 +47,11 @@ class MaterialTheme {
       tertiaryFixedDim: Color(0xffc6c6c8),
       onTertiaryFixedVariant: Color(0xff464749),
       surfaceDim: Color(0xffdcd9d9),
-      surfaceBright: Color(0xfffcf8f8),
+      surfaceBright: Color.fromARGB(255, 249, 246, 246),
       surfaceContainerLowest: Color(0xffffffff),
       surfaceContainerLow: Color(0xfff6f3f3),
-      surfaceContainer: Color(0xfff0eded),
-      surfaceContainerHigh: Color(0xffebe7e7),
+      surfaceContainer: Color.fromARGB(255, 231, 228, 228),
+      surfaceContainerHigh: Color.fromARGB(255, 235, 235, 235),
       surfaceContainerHighest: Color(0xFFEBEBEB),
     );
   }
@@ -63,7 +63,7 @@ class MaterialTheme {
   static ColorScheme lightMediumContrastScheme() {
     return const ColorScheme(
       brightness: Brightness.light,
-      primary: Color(0xff33373b),
+      primary: Color(0xFF131313),
       surfaceTint: Color(0xff5b5f63),
       onPrimary: Color(0xffffffff),
       primaryContainer: Color(0xff6a6d72),
@@ -106,7 +106,7 @@ class MaterialTheme {
       surfaceContainerLowest: Color(0xffffffff),
       surfaceContainerLow: Color(0xfff6f3f3),
       surfaceContainer: Color(0xffebe7e7),
-      surfaceContainerHigh: Color(0xffdfdcdc),
+      surfaceContainerHigh: Color.fromARGB(255, 235, 235, 235),
       surfaceContainerHighest: Color(0xFFEBEBEB),
     );
   }
@@ -118,7 +118,7 @@ class MaterialTheme {
   static ColorScheme lightHighContrastScheme() {
     return const ColorScheme(
       brightness: Brightness.light,
-      primary: Color(0xff292d30),
+      primary: Color(0xFF131313),
       surfaceTint: Color(0xff5b5f63),
       onPrimary: Color(0xffffffff),
       primaryContainer: Color(0xff464a4e),
@@ -161,7 +161,7 @@ class MaterialTheme {
       surfaceContainerLowest: Color(0xffffffff),
       surfaceContainerLow: Color(0xfff3f0f0),
       surfaceContainer: Color(0xffe5e2e1),
-      surfaceContainerHigh: Color(0xffd7d4d3),
+      surfaceContainerHigh: Color.fromARGB(255, 235, 235, 235),
       surfaceContainerHighest: Color(0xFFEBEBEB),
     );
   }

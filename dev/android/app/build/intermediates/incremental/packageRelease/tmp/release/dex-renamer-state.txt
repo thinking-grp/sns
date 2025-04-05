@@ -1,0 +1,4 @@
+#Sat Apr 05 20:07:15 JST 2025
+base.0=/Users/sentaroutakenaka/Downloads/thinking_SNS/android/app/build/intermediates/dex/release/minifyReleaseWithR8/classes.dex
+path.0=classes.dex
+renamed.0=classes.dex
