@@ -19,6 +19,7 @@ import 'package:animations/animations.dart';
 import 'package:should_rebuild/should_rebuild.dart';
 import 'package:flutter/foundation.dart';
 import 'dart:io';
+import 'dart:math';
 
 class AuthState {
   static final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -36,7 +37,6 @@ class AuthState {
       // モバイル用の認証
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
       if (googleUser == null) {
-        print('Google Sign-In: ユーザーがキャンセルしました');
         return null;
       }
 
@@ -50,11 +50,6 @@ class AuthState {
       return result;
     }
   } catch (e) {
-    print('Google Sign-In Error: $e');
-    if (e is FirebaseAuthException) {
-      print('Firebase Auth Error Code: ${e.code}');
-      print('Firebase Auth Error Message: ${e.message}');
-    }
     return null;
   }
 }
@@ -73,8 +68,6 @@ class AuthState {
         await googleSignIn.signOut();
       }
     } catch (e) {
-      print('Sign Out Error: $e');
-      // olyu cheoli
       rethrow;
     }
   }
@@ -245,6 +238,50 @@ class _PostListScreenState extends State<PostListScreen> {
     _fetchLatestPosts();
   }
 
+  Future<void> _saveUsername(String username) async {
+  final user = AuthState.currentUser;
+  if (user == null) return;
+
+  try {
+    final prefs = await SharedPreferences.getInstance();
+    await firestore.FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .set({'username': username}, firestore.SetOptions(merge: true)); // Firestoreに保存
+
+    await prefs.setString('username', username); // ローカルにも保存
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('ユーザー名を保存しました！')),
+    );
+  } catch (e) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('ユーザー名の保存に失敗しました: $e')),
+    );
+  }
+}
+Future<void> _restoreUsername() async {
+  final user = AuthState.currentUser;
+  if (user == null) return;
+
+  try {
+    final prefs = await SharedPreferences.getInstance();
+    final doc = await firestore.FirebaseFirestore.instance
+        .collection('users')
+        .doc(user.uid)
+        .get();
+
+    if (doc.exists && doc.data() != null) {
+      final username = doc.data()!['username'] as String? ?? '未設定';
+      await prefs.setString('username', username); // ローカルに保存
+    }
+  } catch (e) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('ユーザー名の復元に失敗しました: $e')),
+    );
+  }
+}
+
   Future<void> _fetchLatestPosts() async {
     try {
       setState(() {
@@ -280,7 +317,6 @@ class _PostListScreenState extends State<PostListScreen> {
           try {
             posts.add(Post.fromDocument(doc));
           } catch (e) {
-            print('メイン投稿の解析に失敗しました: ${e.toString()}');
           }
         }
         
@@ -300,7 +336,6 @@ class _PostListScreenState extends State<PostListScreen> {
               backgroundImage: data['bgimg'] as String?,
             ));
           } catch (e) {
-            print('ミニ投稿の解析に失敗しました: ${e.toString()}');
           }
         }
 
@@ -323,7 +358,6 @@ class _PostListScreenState extends State<PostListScreen> {
         _isLoading = false;
         _errorMessage = 'エラーが発生しました: ${e.toString()}';
       });
-      print('エラー: ${e.toString()}');
     }
   }
   
@@ -343,7 +377,7 @@ class _PostListScreenState extends State<PostListScreen> {
       final query = postsRef
           .orderBy('createdAt', descending: true)
           .startAfterDocument(_lastDocument!)
-          .limit(9);
+          .limit(7);
           
       final querySnapshot = await query.get();
       
@@ -354,7 +388,6 @@ class _PostListScreenState extends State<PostListScreen> {
           try {
             newPosts.add(Post.fromDocument(doc));
           } catch (e) {
-            print('データの解析に失敗しました: ${e.toString()}');
           }
         }
         
@@ -376,7 +409,6 @@ class _PostListScreenState extends State<PostListScreen> {
       setState(() {
         _isLoadingMore = false;
       });
-      print('追加データの読み込みエラー: ${e.toString()}');
     }
   }
   
@@ -399,7 +431,6 @@ class _PostListScreenState extends State<PostListScreen> {
       });
       
     } catch (e) {
-      print('リアクション更新エラー: ${e.toString()}');
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('リアクションの更新に失敗しました'))
       );
@@ -466,7 +497,6 @@ class _PostListScreenState extends State<PostListScreen> {
     );
     _fetchLatestPosts();
   } catch (e) {
-    print('削除エラー: ${e.toString()}');
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('削除に失敗しました')),
     );
@@ -534,6 +564,16 @@ Future<void> _createPost(
     final prefs = await SharedPreferences.getInstance();
     final username = prefs.getString('username') ?? '不明なユーザー';
 
+// 現在のユーザーUIDを取得
+    final user = AuthState.currentUser;
+    if (user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('ログインが必要です')),
+      );
+      return;
+    }
+    final String userUid = user.uid;
+
     const uuid = Uuid();
     final String postId = uuid.v4();
 
@@ -546,6 +586,7 @@ Future<void> _createPost(
       'createdAt': firestore.FieldValue.serverTimestamp(),
       'reactions': {},
       'username': username,
+      'userUid': userUid,
       'bgimg': backgroundImage,
     };
 
@@ -568,7 +609,6 @@ Future<void> _createPost(
       const SnackBar(content: Text('投稿が完了しました!')),
     );
   } catch (e) {
-    print('投稿エラー: ${e.toString()}');
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('投稿が完了しました')),
     );
@@ -616,7 +656,6 @@ Future<void> _createPost(
         const SnackBar(content: Text('ミニ投稿が完了しました')),
       );
     } catch (e) {
-      print('ミニ投稿エラー: ${e.toString()}');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('ミニ投稿に失敗しました: ${e.toString()}')),
       );
@@ -674,68 +713,92 @@ bool useBackgroundImage = false;  // add
     'assets/bgimg/done.svg',
   ];
 
-    await showModalBottomSheet(
+  // 🟥추가: Set of background color and text color pairs
+  final List<Map<String, Color>> colorSets = [
+    {'background': Color(0xFFbfefb1), 'text': Color(0xFF275021)}, // 🟥추가
+    {'background': Color(0xFFbaeaff), 'text': Color(0xFF004d62)}, // 🟥추가
+    {'background': Color(0xFFe4dfff), 'text': Color(0xFF463f77)}, // 🟥추가
+    {'background': Color(0xFF148ecc), 'text': Color(0xFFeeff16)}, // 🟥추가
+    {'background': Color(0xFFbd0f09), 'text': Color(0xFFffda1f)}, // 🟥추가
+    {'background': Color(0xFF53c396), 'text': Color(0xFF251f1e)}, // 🟥추가
+    {'background': Color(0xFF251f1e), 'text': Color(0xFF53c396)}, // 🟥추가
+    {'background': Color(0xFFf21259), 'text': Color(0xFFf0fbbc)}, // 🟥추가
+    {'background': Color(0xFFf0fbbf), 'text': Color(0xFFf21259)}, // 🟥추가
+    {'background': Color(0xFFf8d642), 'text': Color(0xFF1d1b26)}, // 🟥추가
+    {'background': Color(0xFF1d1b26), 'text': Color(0xFFf8d642)}
+  ];
+
+  // 🟥추가: Select a random color pair (background and text color)
+  final randomColorSet = colorSets[Random().nextInt(colorSets.length)];
+  backgroundColor = randomColorSet['background']!;
+  textColor = randomColorSet['text']!;
+
+
+await showModalBottomSheet(
   context: context,
   isScrollControlled: true,
   shape: const RoundedRectangleBorder(
-    borderRadius: BorderRadius.vertical(top: Radius.circular(24)), // 角丸を大きき
+    borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
   ),
+  backgroundColor: Theme.of(context).colorScheme.surface,
   builder: (BuildContext context) {
     return DraggableScrollableSheet(
       expand: false,
-      initialChildSize: 0.5,
+      initialChildSize: 0.7,
       minChildSize: 0.3,
-      maxChildSize: 0.9,
+      maxChildSize: 1.0, // 最大まで拡大可能
       builder: (BuildContext context, ScrollController scrollController) {
-        return StatefulBuilder(
-          builder: (context, setState) {
-            return Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Container(
-                  margin: const EdgeInsets.symmetric(vertical: 8),
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: Colors.grey[400],
-                    borderRadius: BorderRadius.circular(2),
+        return SingleChildScrollView(
+          controller: scrollController,
+          child: StatefulBuilder(
+            builder: (context, setState) {
+              return Column(
+                // mainAxisSize を指定しないか、max にする
+                children: [
+                  Container(
+                    margin: const EdgeInsets.symmetric(vertical: 8),
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[400],
+                      borderRadius: BorderRadius.circular(2),
+                    ),
                   ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(8, 0, 8, 12), // margin-bottom
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      TextButton(
-                        onPressed: () => Navigator.pop(context),
-                        child: const Text('キャンセル'),
-                      ),
-                      TextButton(
-                    onPressed: () {
-                      if (isMiniPost) {
-                        _createMiniPost(
-                          postText,
-                          backgroundColor,
-                          textColor,
-                          selectedBgImage,
-                        );
-                      } else {
-                        _createPost(
-                          postText,
-                          isDelayed,
-                          backgroundColor,
-                          textColor,
-                          selectedBgImage,
-                        );
-                      }
-                      Navigator.pop(context);
-                    },
-                    child: const Text('投稿'),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(8, 0, 8, 12),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: const Text('キャンセル'),
+                        ),
+                        TextButton(
+                          onPressed: () {
+                            if (isMiniPost) {
+                              _createMiniPost(
+                                postText,
+                                backgroundColor,
+                                textColor,
+                                selectedBgImage,
+                              );
+                            } else {
+                              _createPost(
+                                postText,
+                                isDelayed,
+                                backgroundColor,
+                                textColor,
+                                selectedBgImage,
+                              );
+                            }
+                            Navigator.pop(context);
+                          },
+                          child: const Text('投稿'),
+                        ),
+                      ],
+                    ),
                   ),
-                    ],
-                  ),
-                ),
-                // geul type
+                  // geul type
                 Padding(
                   padding: const EdgeInsets.all(16),
                   child: SegmentedButton<String>(
@@ -788,7 +851,6 @@ useBackgroundImage
       child: LayoutBuilder(
         builder: (context, constraints) {
           final itemCount = backgroundImages.length;
-          final centerIndex = (itemCount / 2).floor();
 
           return ListView.builder(
   scrollDirection: Axis.horizontal,
@@ -835,7 +897,7 @@ useBackgroundImage
                 if (selectedBgImage == bgImage)
                   Positioned.fill(
                     child: Container(
-                      color: Colors.black.withOpacity(0.3),
+                      color: const Color.fromRGBO(0, 0, 0, 0.3),
                       child: const Icon(
                         Icons.check_circle,
                         color: Colors.white,
@@ -920,9 +982,11 @@ useBackgroundImage
                     ),
                   ),
                 ),
-              ],
-            );
-          },
+
+                ],
+              );
+            },
+          ),
         );
       },
     );
@@ -1049,13 +1113,13 @@ Future<void> _showInfoDialog() async {
                     children: [
                       FilledButton(
                         style: ButtonStyle(
-                          backgroundColor: MaterialStateProperty.all(
+                          backgroundColor: WidgetStateProperty.all(
                             Theme.of(context).colorScheme.inverseSurface,
                           ),
-                          padding: MaterialStateProperty.all(
+                          padding: WidgetStateProperty.all(
                             const EdgeInsets.symmetric(vertical: 24.0, horizontal: 48.0),
                           ),
-                          shape: MaterialStateProperty.all(
+                          shape: WidgetStateProperty.all(
                             RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(30),
                             ),
@@ -1197,32 +1261,34 @@ Widget _buildPostList() {
     return const Center(child: Text('投稿がありません'));
   }
 
-  return ListView.builder(
-    itemCount: _posts.length + 1,
-    itemBuilder: (context, index) {
-      if (index == _posts.length) {
-        return Padding(
-          padding: const EdgeInsets.symmetric(vertical: 24.0, horizontal: 0), // padding縦16，横8整
-          child: Align(
-            alignment: Alignment.center,
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(minWidth: 0), // fit-contentよに調整る
-              child: FilledButton.tonal(
-                onPressed: _loadMorePosts,
-                child: const Text('もっと読み込む'),
-              ),
+return ListView.builder(
+  itemCount: _posts.length + (_hasMorePosts ? 1 : 0),
+  itemBuilder: (context, index) {
+    if (index == _posts.length) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 24.0, horizontal: 0),
+        child: Align(
+          alignment: Alignment.center,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(minWidth: 0),
+            child: FilledButton.tonal(
+              onPressed: _isLoadingMore ? null : _loadMorePosts, // ローディングは無効化
+              child: _isLoadingMore
+                  ? const CircularProgressIndicator()
+                  : const Text('もっと読み込む'),
             ),
           ),
-        );
-      }
-      final post = _posts[index];
-      return PostCard(
-        post: post,
-        onReactionUpdated: (emoji) => _updateReaction(post, emoji),
-        onDeletePost: (postId) => _showPostDeleteConfirmationDialog(postId),
+        ),
       );
-    },
-  );
+    }
+    final post = _posts[index];
+    return PostCard(
+      post: post,
+      onReactionUpdated: (emoji) => _updateReaction(post, emoji),
+      onDeletePost: (postId) => _showPostDeleteConfirmationDialog(postId),
+    );
+  },
+);
 }
   
   Widget _buildPostHistory() {
@@ -1353,13 +1419,13 @@ Widget _buildPostList() {
         width: double.infinity,
         child: FilledButton(
           style: ButtonStyle(
-            backgroundColor: MaterialStateProperty.all(
+            backgroundColor: WidgetStateProperty.all(
               Theme.of(context).colorScheme.inverseSurface,
             ),
-            padding: MaterialStateProperty.all(
+            padding: WidgetStateProperty.all(
               const EdgeInsets.symmetric(vertical: 24.0),
             ),
-            shape: MaterialStateProperty.all(
+            shape: WidgetStateProperty.all(
               RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(30),
               ),
@@ -1422,13 +1488,13 @@ Widget _buildPostList() {
           width: double.infinity,
           child: FilledButton(
             style: ButtonStyle(
-              backgroundColor: MaterialStateProperty.all(
+              backgroundColor: WidgetStateProperty.all(
                 Theme.of(context).colorScheme.inverseSurface, // ダークモード対応
               ),
-              padding: MaterialStateProperty.all(
+              padding: WidgetStateProperty.all(
                 const EdgeInsets.symmetric(vertical: 24.0),
               ),
-              shape: MaterialStateProperty.all(
+              shape: WidgetStateProperty.all(
                 RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(30),
                 ),
@@ -1573,9 +1639,6 @@ final List<Widget> screens = [
   _buildBlankScreen(), // empty screen
 ];
 
-
-  final screenWidth = MediaQuery.of(context).size.width;
-
   return Scaffold(
     
   resizeToAvoidBottomInset: false,
@@ -1633,10 +1696,10 @@ final List<Widget> screens = [
                 child: Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                   decoration: ShapeDecoration(
-                    color: Theme.of(context).colorScheme.surfaceContainerLow.withOpacity(0.5),
+                    color: Theme.of(context).colorScheme.surfaceContainerLow.withAlpha(128),
                     shadows: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.1),
+                        color: const Color.fromRGBO(0, 0, 0, 0.1),
                         blurRadius: 10,
                         offset: const Offset(0, 4),
                       ),
@@ -1683,13 +1746,6 @@ Widget _buildFABButton(BuildContext context) {
       height: 56,
       decoration: ShapeDecoration(
         color: Theme.of(context).colorScheme.inverseSurface,
-        shadows: [
-          BoxShadow(
-            color: Theme.of(context).colorScheme.shadow.withOpacity(0.3),
-            blurRadius: 16,
-            offset: const Offset(0, 4),
-          ),
-        ],
         shape: SmoothRectangleBorder(
           borderRadius: SmoothBorderRadius(
             cornerRadius: 20,
@@ -1725,7 +1781,7 @@ Widget _buildNavItem(IconData icon, int index) {
       height: 56,
       decoration: ShapeDecoration(
         color: isSelected
-            ? Theme.of(context).colorScheme.primary.withOpacity(0.2)
+            ? Theme.of(context).colorScheme.primary.withAlpha(51)
             : Colors.transparent,
         shape: SmoothRectangleBorder(
           borderRadius: SmoothBorderRadius(
@@ -1831,13 +1887,13 @@ MediaQuery.removeViewInsets(
       if (user == null)
   FilledButton(
     style: ButtonStyle(
-      backgroundColor: MaterialStateProperty.all(
+      backgroundColor: WidgetStateProperty.all(
         Theme.of(context).colorScheme.inverseSurface,
       ),
-      padding: MaterialStateProperty.all(
+      padding: WidgetStateProperty.all(
         const EdgeInsets.symmetric(vertical: 24.0, horizontal: 32.0),
       ),
-      shape: MaterialStateProperty.all(
+      shape: WidgetStateProperty.all(
         RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(30),
         ),
@@ -1847,6 +1903,7 @@ MediaQuery.removeViewInsets(
       try {
         final credential = await AuthState.signInWithGoogle();
         if (credential != null && mounted) {
+          await _restoreUsername(); // Firestoreらユーザー名を復元
           setState(() {});
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('ログインしました: ${credential.user?.email}')),
@@ -1867,13 +1924,13 @@ MediaQuery.removeViewInsets(
           else
             FilledButton(
               style: ButtonStyle(
-      backgroundColor: MaterialStateProperty.all(
+      backgroundColor: WidgetStateProperty.all(
         Theme.of(context).colorScheme.inverseSurface,
       ),
-      padding: MaterialStateProperty.all(
+      padding: WidgetStateProperty.all(
         const EdgeInsets.symmetric(vertical: 24.0, horizontal: 32.0),
       ),
-      shape: MaterialStateProperty.all(
+      shape: WidgetStateProperty.all(
         RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(30),
         ),
@@ -1974,13 +2031,13 @@ SizedBox(
     shouldRebuild: (oldWidget, newWidget) => false, // raebuild yebang
     child: FilledButton(
       style: ButtonStyle(
-        backgroundColor: MaterialStateProperty.all(
+        backgroundColor: WidgetStateProperty.all(
           Theme.of(context).colorScheme.inverseSurface, // dark:white
         ),
-        padding: MaterialStateProperty.all(
+        padding: WidgetStateProperty.all(
           const EdgeInsets.symmetric(vertical: 24.0),
         ),
-        shape: MaterialStateProperty.all(
+        shape: WidgetStateProperty.all(
           RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(30),
           ),
@@ -1996,7 +2053,7 @@ SizedBox(
     );
     return;
   }
-
+await _saveUsername(newUsername); // Firestoreに保存
   await prefs.setString('username', newUsername);
 
   if (mounted) {
@@ -2014,9 +2071,6 @@ SizedBox(
       const SnackBar(content: Text('ユーザー名を保存しました！')),
     );
   }
-
-  // バブっグエオグ
-  print('ユーザー名が保存されました: $newUsername');
 },
 
       child: Text(
@@ -2331,7 +2385,6 @@ void _subscribeToSession() {
           .child('sessions/${widget.sessionId}/text$index')
           .set(value)
           .catchError((error) {
-            print('書き込みエラー: $error');
           });
       });
       _pendingWrites.clear();
@@ -2436,7 +2489,7 @@ void _subscribeToSession() {
                     border: InputBorder.none,
                     hintText: '${index + 1}番目のメッセージ',
                     hintStyle: TextStyle(
-                      color: (_textColors[index] ?? Theme.of(context).colorScheme.onSurface).withOpacity(0.5),
+                      color: (_textColors[index] ?? Theme.of(context).colorScheme.onSurface).withAlpha(128),
                     ),
                   ),
                   onChanged: (value) => _scheduleDatabaseWrite(index, value),
@@ -2458,6 +2511,7 @@ void _subscribeToSession() {
 class Post {
   final String id;
   final String username;
+  final String userUid;
   final Color backgroundColor;
   final Color textColor;
   final DateTime createdAt;
@@ -2469,6 +2523,7 @@ class Post {
   Post({
     required this.id,
     required this.username,
+    required this.userUid,
     required this.backgroundColor,
     required this.textColor,
     required this.createdAt,
@@ -2482,6 +2537,7 @@ class Post {
     final id = doc.id;
     final data = doc.data() as Map<String, dynamic>;
     final username = data['username'] as String? ?? '不明なユーザー';
+    final userUid = data['userUid'] as String? ?? '不明なユーザーID';
     final bgColor = _hexToColor(data['bg'] ?? '#FFFFFF');
     final textColor = _hexToColor(data['color'] ?? '#000000');
     final backgroundImage = data['bgimg'] as String?;
@@ -2505,6 +2561,7 @@ class Post {
     return Post(
       id: id,
       username: username,
+      userUid: userUid,
       backgroundColor: bgColor,
       textColor: textColor,
       createdAt: createdAt,
@@ -2687,7 +2744,7 @@ return Hero(
                       Text(
                         widget.post.username,
                         style: TextStyle(
-                          color: widget.post.textColor.withOpacity(1),
+                          color: widget.post.textColor,
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
                         ),
@@ -2705,7 +2762,7 @@ return Hero(
                       Text(
                         formattedDate,
                         style: TextStyle(
-                          color: widget.post.textColor.withOpacity(0.6),
+                          color: widget.post.textColor.withAlpha(153),
                           fontSize: 12,
                         ),
                       ),
@@ -2790,9 +2847,6 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
     _loadReplies();
   }
 
-  Future<void> _fetchLatestPosts() async {
-    setState(() {});
-  }
 
   Future<void> _loadReplies() async {
   try {
@@ -2832,7 +2886,6 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
       });
     }
   } catch (error) {
-    print('返信の読み込みエラー: ${error.toString()}');
     setState(() {
       _isLoadingReplies = false;
     });
@@ -2912,7 +2965,6 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
       setState(() {
         _isSubmitting = false;
       });
-      print('コメント投稿エラー: ${e.toString()}');
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('コメントの投稿に失敗しました'))
       );
@@ -2974,6 +3026,25 @@ return Hero(
             child: ListView(
               padding: const EdgeInsets.all(16),
               children: [
+                const SizedBox(height: 8),
+                  // UIDの表示
+                  Text(
+                    '${widget.post.username}',
+                    style: TextStyle(
+                      color: textColor,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                const SizedBox(height: 8),
+                  // UIDの表示
+                  Text(
+                    'UID: ${widget.post.userUid}',
+                    style: TextStyle(
+                      color: textColor.withAlpha(153),
+                      fontSize: 14,
+                    ),
+                  ),
                 // メインの投稿テキスト
                 SelectableText(
                   widget.post.delay ? _displayText : widget.post.text,
@@ -2987,7 +3058,7 @@ return Hero(
                 Text(
                   formattedDate,
                   style: TextStyle(
-                    color: textColor.withOpacity(0.6),
+                    color: textColor.withAlpha(153),
                     fontSize: 14,
                   ),
                 ),
@@ -3075,13 +3146,6 @@ return Hero(
           Container(
             decoration: BoxDecoration(
               color: backgroundColor,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  blurRadius: 5,
-                  offset: const Offset(0, -2),
-                ),
-              ],
             ),
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: SafeArea(
@@ -3093,21 +3157,21 @@ return Hero(
                       style: TextStyle(color: textColor),
                       decoration: InputDecoration(
                         hintText: 'コメントを入力...',
-                        hintStyle: TextStyle(color: textColor.withOpacity(0.5)),
+                        hintStyle: TextStyle(color: textColor.withAlpha(128)),
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(24),
-                          borderSide: BorderSide(color: textColor.withOpacity(0.2)),
+                          borderSide: BorderSide(color: textColor.withAlpha(51)),
                         ),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(24),
-                          borderSide: BorderSide(color: textColor.withOpacity(0.2)),
+                          borderSide: BorderSide(color: textColor.withAlpha(51)),
                         ),
                         focusedBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(24),
-                          borderSide: BorderSide(color: textColor.withOpacity(0.4)),
+                          borderSide: BorderSide(color: textColor.withAlpha(102)),
                         ),
                         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                        fillColor: textColor.withOpacity(0.05),
+                        fillColor: textColor.withAlpha(13),
                         filled: true,
                       ),
                     ),
