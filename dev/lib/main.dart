@@ -145,6 +145,7 @@ class MyApp extends StatelessWidget {
   }
 }
 
+
 class CommentWidget extends StatefulWidget {
   final String commentText;
   final Function(String) onReply;
@@ -2632,16 +2633,32 @@ class PostCard extends StatefulWidget {
 class _PostCardState extends State<PostCard> {
   String _displayText = '';
   Timer? _timer;
+  Set<String> _reactedEmojis = {};
 
-  @override
-  void initState() {
-    super.initState();
-    if (widget.post.delay) {
-      _startDelayedText();
-    } else {
-      _displayText = widget.post.text;
-    }
+Future<void> _loadReactedEmojis() async {
+  final prefs = await SharedPreferences.getInstance();
+  final reacted = prefs.getStringList('reacted_${widget.post.id}') ?? [];
+  setState(() {
+    _reactedEmojis = reacted.toSet();
+  });
+}
+
+Future<void> _saveReactedEmojis() async {
+  final prefs = await SharedPreferences.getInstance();
+  await prefs.setStringList('reacted_${widget.post.id}', _reactedEmojis.toList());
+}
+
+@override
+void initState() {
+  super.initState();
+  _loadReactedEmojis(); // リアクション読み込み
+
+  if (widget.post.delay) {
+    _startDelayedText();
+  } else {
+    _displayText = widget.post.text;
   }
+}
 
   void _startDelayedText() {
     void updateText() {
@@ -2673,6 +2690,7 @@ class _PostCardState extends State<PostCard> {
     _timer?.cancel();
     super.dispose();
   }
+
 
 @override
 Widget build(BuildContext context) {
@@ -2721,7 +2739,6 @@ return Hero(
                     PageRouteBuilder(
                       pageBuilder: (context, animation, secondaryAnimation) => PostDetailScreen(
                         post: widget.post,
-                        onReactionUpdated: widget.onReactionUpdated,
                       ),
                       transitionDuration: const Duration(milliseconds: 500),
                       transitionsBuilder: (context, animation, secondaryAnimation, child) {
@@ -2767,38 +2784,85 @@ return Hero(
                         ),
                       ),
                       const SizedBox(height: 8),
-                      Row(
-                        children: reactionSvgs.entries.map((entry) {
-                          final emoji = entry.key;
-                          final svgPath = entry.value;
-                          final count = widget.post.reactions[emoji] ?? 0;
-                          return Expanded(
-                            child: TextButton(
-                              style: TextButton.styleFrom(
-                                foregroundColor: widget.post.textColor,
-                                padding: EdgeInsets.zero,
-                                minimumSize: Size.zero,
-                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                              ),
-                              onPressed: () {
-                                widget.onReactionUpdated(emoji);
-                              },
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  SvgPicture.asset(
-                                    svgPath,
-                                    width: iconSize,
-                                    height: iconSize,
-                                  ),
-                                  const SizedBox(width: 4),
-                                  Text('$count'),
-                                ],
-                              ),
-                            ),
-                          );
-                        }).toList(),
-                      ),
+Row(
+  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+  children: reactionSvgs.entries.map((entry) {
+    final emoji = entry.key;
+    final svgPath = entry.value;
+    final hasReacted = _reactedEmojis.contains(emoji);
+    int count = widget.post.reactions[emoji] ?? 0;
+
+    return SizedBox(
+      width: 58,
+      child: TextButton(
+        style: TextButton.styleFrom(
+          foregroundColor: hasReacted ? Colors.black : widget.post.textColor,
+          backgroundColor: hasReacted ? Colors.white : Colors.transparent,
+          padding: const EdgeInsets.symmetric(vertical: 16.0, horizontal: 0.0), // あなたの指定を尊重
+          minimumSize: Size.zero,
+          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        ),
+        onPressed: () async {
+          final user = AuthState.currentUser;
+
+          if (user == null) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('リアクションするにはログインする必要があります'),
+              ),
+            );
+            return;
+          }
+
+          final docRef = firestore.FirebaseFirestore.instance
+              .collection('post-1')
+              .doc('wsbxPa2kQDaexLV9hiVC')
+              .collection('maintext')
+              .doc(widget.post.id);
+
+          // ローカルで即座に反映（リビルドは不要）
+          setState(() {
+            if (_reactedEmojis.contains(emoji)) {
+              _reactedEmojis.remove(emoji);
+              widget.post.reactions[emoji] = (widget.post.reactions[emoji] ?? 1) - 1;
+            } else {
+              _reactedEmojis.add(emoji);
+              widget.post.reactions[emoji] = (widget.post.reactions[emoji] ?? 0) + 1;
+            }
+          });
+
+          // Firestoreの更新
+          await docRef.update({
+            'reactions.$emoji': firestore.FieldValue.increment(
+              _reactedEmojis.contains(emoji) ? 1 : -1,
+            ),
+          });
+
+          await _saveReactedEmojis();
+        },
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            SvgPicture.asset(
+              svgPath,
+              width: iconSize,
+              height: iconSize,
+            ),
+            const SizedBox(width: 4),
+            Flexible(
+              child: Text(
+                '${widget.post.reactions[emoji] ?? 0}',
+                overflow: TextOverflow.ellipsis,
+                softWrap: false,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }).toList(),
+)
+
                     ],
                   ),
                 ),
@@ -2813,22 +2877,21 @@ return Hero(
 
 }
 }
-
 class PostDetailScreen extends StatefulWidget {
   final Post post;
-  final Function(String) onReactionUpdated;
 
   const PostDetailScreen({
-    super.key, 
+    super.key,
     required this.post,
-    required this.onReactionUpdated,
   });
 
   @override
   State<PostDetailScreen> createState() => _PostDetailScreenState();
 }
 
-class _PostDetailScreenState extends State<PostDetailScreen> { 
+
+
+class _PostDetailScreenState extends State<PostDetailScreen> {
   final TextEditingController _commentController = TextEditingController();
   bool _isSubmitting = false;
   bool _isLoadingReplies = true;
@@ -2847,58 +2910,56 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
     _loadReplies();
   }
 
-
   Future<void> _loadReplies() async {
-  try {
-    final docRef = firestore.FirebaseFirestore.instance
-        .collection('post-1')
-        .doc('wsbxPa2kQDaexLV9hiVC')
-        .collection('maintext')
-        .doc(widget.post.id);
+    try {
+      final docRef = firestore.FirebaseFirestore.instance
+          .collection('post-1')
+          .doc('wsbxPa2kQDaexLV9hiVC')
+          .collection('maintext')
+          .doc(widget.post.id);
 
-    final docSnapshot = await docRef.get();
-    final data = docSnapshot.data();
-    
-    if (data != null && data['replies'] != null) {
-      final repliesMap = Map<String, dynamic>.from(data['replies']);
-      final Map<String, Map<String, dynamic>> formattedReplies = {};
+      final docSnapshot = await docRef.get();
+      final data = docSnapshot.data();
 
-      for (var entry in repliesMap.entries) {
-        final replyId = entry.key;
-        final replyData = entry.value as Map<String, dynamic>;
+      if (data != null && data['replies'] != null) {
+        final repliesMap = Map<String, dynamic>.from(data['replies']);
+        final Map<String, Map<String, dynamic>> formattedReplies = {};
 
-        formattedReplies[replyId] = {
-          'text': replyData['text'] ?? '',
-          'createdAt': replyData['createdAt'] is firestore.Timestamp
-              ? (replyData['createdAt'] as firestore.Timestamp).toDate()
-              : DateTime.now(),
-        };
+        for (var entry in repliesMap.entries) {
+          final replyId = entry.key;
+          final replyData = entry.value as Map<String, dynamic>;
+
+          formattedReplies[replyId] = {
+            'text': replyData['text'] ?? '',
+            'createdAt': replyData['createdAt'] is firestore.Timestamp
+                ? (replyData['createdAt'] as firestore.Timestamp).toDate()
+                : DateTime.now(),
+          };
+        }
+
+        setState(() {
+          _replies = formattedReplies;
+          _isLoadingReplies = false;
+        });
+      } else {
+        setState(() {
+          _replies = {};
+          _isLoadingReplies = false;
+        });
       }
-
+    } catch (error) {
       setState(() {
-        _replies = formattedReplies;
-        _isLoadingReplies = false;
-      });
-    } else {
-      setState(() {
-        _replies = {};
         _isLoadingReplies = false;
       });
     }
-  } catch (error) {
-    setState(() {
-      _isLoadingReplies = false;
-    });
   }
- }
 
-    
   void _startDelayedText() {
     void updateText() {
       final now = DateTime.now();
       final elapsedSeconds = now.difference(widget.post.createdAt).inSeconds;
       final charactersToShow = (elapsedSeconds / 20).floor();
-      
+
       if (charactersToShow < widget.post.text.length) {
         setState(() {
           _displayText = widget.post.text.substring(0, charactersToShow);
@@ -2910,6 +2971,7 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
         _timer?.cancel();
       }
     }
+
     updateText();
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       updateText();
@@ -2922,36 +2984,32 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
     _commentController.dispose();
     super.dispose();
   }
-  
+
   Future<void> _submitComment() async {
     if (_commentController.text.trim().isEmpty) return;
-    
+
     setState(() {
       _isSubmitting = true;
     });
-    
+
     try {
-      // xon comment
       final String replyId = DateTime.now().millisecondsSinceEpoch.toString();
-      
-      // comment
+
       final Map<String, dynamic> replyData = {
         'text': _commentController.text.trim(),
         'createdAt': firestore.FieldValue.serverTimestamp(),
       };
-      
-      // Firestore update
+
       final docRef = firestore.FirebaseFirestore.instance
           .collection('post-1')
           .doc('wsbxPa2kQDaexLV9hiVC')
           .collection('maintext')
           .doc(widget.post.id);
-          
+
       await docRef.update({
         'replies.$replyId': replyData,
       });
-      
-      // local data update
+
       setState(() {
         _replies[replyId] = {
           'text': _commentController.text.trim(),
@@ -2960,247 +3018,195 @@ class _PostDetailScreenState extends State<PostDetailScreen> {
         _commentController.clear();
         _isSubmitting = false;
       });
-      
     } catch (e) {
       setState(() {
         _isSubmitting = false;
       });
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('コメントの投稿に失敗しました'))
+        const SnackBar(content: Text('コメントの投稿に失敗しました')),
       );
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    // clr
-    
     final backgroundColor = widget.post.getLighterBackgroundColor(context);
-  final textColor = widget.post.getDarkerTextColor(context);
-    // format
-    final formattedDate = DateFormat('yyyy年MM月dd日 HH:mm:ss').format(widget.post.createdAt);
-    
+    final textColor = widget.post.getDarkerTextColor(context);
 
-    // reaction
-  final Map<String, String> reactionSvgs = {
-      '❤️': 'assets/icons/reaction_like.svg',
-      '👏': 'assets/icons/reaction_clap.svg',
-      '🤔': 'assets/icons/reaction_thinking.svg',
-      '🤝': 'assets/icons/reaction_handshake.svg',
-      '✅': 'assets/icons/reaction_check.svg',
-    };
+    final formattedDate =
+        DateFormat('yyyy年MM月dd日 HH:mm:ss').format(widget.post.createdAt);
 
-    // size(px????)
-  const double iconSize = 20.0;
-    
-    // xin
     final sortedReplies = _replies.entries.toList()
       ..sort((a, b) {
-        final aTimestamp = a.value['createdAt'] is firestore.Timestamp 
-            ? (a.value['createdAt'] as firestore.Timestamp).toDate() 
+        final aTimestamp = a.value['createdAt'] is firestore.Timestamp
+            ? (a.value['createdAt'] as firestore.Timestamp).toDate()
             : DateTime.now();
-        final bTimestamp = b.value['createdAt'] is firestore.Timestamp 
-            ? (b.value['createdAt'] as firestore.Timestamp).toDate() 
+        final bTimestamp = b.value['createdAt'] is firestore.Timestamp
+            ? (b.value['createdAt'] as firestore.Timestamp).toDate()
             : DateTime.now();
         return bTimestamp.compareTo(aTimestamp);
       });
 
-// PostDetailScreen ye build mesot
-return Hero(
-  tag: 'post-${widget.post.id}',
-  child: Material(
-    color: Colors.transparent,
-    child: Scaffold(
-      resizeToAvoidBottomInset: false,
-      backgroundColor: backgroundColor,
-      appBar: AppBar(
-        title: const Text('返信'),
-        backgroundColor: backgroundColor,
-        foregroundColor: textColor,
-        elevation: 0,
-      ),
-      body: Column(
-        children: [
-          // 投稿内容
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.all(16),
-              children: [
-                const SizedBox(height: 8),
-                  // UIDの表示
-                  Text(
-                    '${widget.post.username}',
-                    style: TextStyle(
-                      color: textColor,
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
+    return Hero(
+      tag: 'post-${widget.post.id}',
+      child: Material(
+        color: Colors.transparent,
+        child: Scaffold(
+          resizeToAvoidBottomInset: false,
+          backgroundColor: backgroundColor,
+          appBar: AppBar(
+            title: const Text('返信'),
+            backgroundColor: backgroundColor,
+            foregroundColor: textColor,
+            elevation: 0,
+          ),
+          body: Column(
+            children: [
+              Expanded(
+                child: ListView(
+                  padding: const EdgeInsets.all(16),
+                  children: [
+                    const SizedBox(height: 8),
+                    Text(
+                      '${widget.post.username}',
+                      style: TextStyle(
+                        color: textColor,
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                  ),
-                const SizedBox(height: 8),
-                  // UIDの表示
-                  Text(
-                    'UID: ${widget.post.userUid}',
-                    style: TextStyle(
-                      color: textColor.withAlpha(153),
-                      fontSize: 14,
+                    const SizedBox(height: 8),
+                    Text(
+                      'UID: ${widget.post.userUid}',
+                      style: TextStyle(
+                        color: textColor.withAlpha(153),
+                        fontSize: 14,
+                      ),
                     ),
-                  ),
-                // メインの投稿テキスト
-                SelectableText(
-                  widget.post.delay ? _displayText : widget.post.text,
-                  style: TextStyle(
-                    color: textColor,
-                    fontSize: 18,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  formattedDate,
-                  style: TextStyle(
-                    color: textColor.withAlpha(153),
-                    fontSize: 14,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                // btns
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.start,
-                  children: reactionSvgs.entries.map((entry) {
-                    final emoji = entry.key;
-                    final svgPath = entry.value;
-                    final count = widget.post.reactions[emoji] ?? 0;
-                    return Padding(
-                      padding: const EdgeInsets.only(right: 8.0),
-                      child: TextButton(
-                        style: TextButton.styleFrom(
-                          foregroundColor: textColor,
-                          padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 12.0),
-                          minimumSize: Size.zero,
-                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        ),
-                        onPressed: () {
-                          widget.onReactionUpdated(emoji);
-                        },
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            SvgPicture.asset(
-                              svgPath,
-                              width: iconSize,
-                              height: iconSize,
-                            ),
-                            const SizedBox(width: 4),
-                            Text('$count'),
-                          ],
+                    SelectableText(
+                      widget.post.delay ? _displayText : widget.post.text,
+                      style: TextStyle(
+                        color: textColor,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      formattedDate,
+                      style: TextStyle(
+                        color: textColor.withAlpha(153),
+                        fontSize: 14,
+                      ),
+                    ),
+                    const SizedBox(height: 24),
+                    const Divider(),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 8),
+                      child: Text(
+                        'コメント (${_replies.length})',
+                        style: TextStyle(
+                          color: textColor,
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
                         ),
                       ),
-                    );
-                  }).toList(),
-                ),
-                const SizedBox(height: 24),
-                const Divider(),
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8),
-                  child: Text(
-                    'コメント (${_replies.length})',
-                    style: TextStyle(
-                      color: textColor,
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
                     ),
-                  ),
-                ),
-                if (!_isLoadingReplies) ...sortedReplies.map((reply) {
-                  String replyDate = '';
-                  if (reply.value['createdAt'] is firestore.Timestamp) {
-                    final timestamp = reply.value['createdAt'] as firestore.Timestamp;
-                    replyDate = DateFormat('MM/dd HH:mm').format(timestamp.toDate());
-                  }
-                  return Card(
-                    color: Colors.transparent,
-                    elevation: 0,
-                    margin: const EdgeInsets.only(bottom: 8),
-                    child: Padding(
-                      padding: const EdgeInsets.all(12),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const SizedBox(height: 4),
-                          SelectableText(
-                            reply.value['text'] ?? '(空のコメント)',
-                            style: TextStyle(
-                              color: widget.post.getDarkerTextColor(context),
-                              fontSize: 16,
+                    if (!_isLoadingReplies)
+                      ...sortedReplies.map((reply) {
+                        String replyDate = '';
+                        if (reply.value['createdAt'] is firestore.Timestamp) {
+                          final timestamp =
+                              reply.value['createdAt'] as firestore.Timestamp;
+                          replyDate =
+                              DateFormat('MM/dd HH:mm').format(timestamp.toDate());
+                        }
+                        return Card(
+                          color: Colors.transparent,
+                          elevation: 0,
+                          margin: const EdgeInsets.only(bottom: 8),
+                          child: Padding(
+                            padding: const EdgeInsets.all(12),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const SizedBox(height: 4),
+                                SelectableText(
+                                  reply.value['text'] ?? '(空のコメント)',
+                                  style: TextStyle(
+                                    color: widget.post.getDarkerTextColor(context),
+                                    fontSize: 16,
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
-                        ],
-                      ),
-                    ),
-                  );
-                }).toList(),
-              ],
-            ),
-          ),
-          // text box
-          Container(
-            decoration: BoxDecoration(
-              color: backgroundColor,
-            ),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: SafeArea(
-              child: Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _commentController,
-                      style: TextStyle(color: textColor),
-                      decoration: InputDecoration(
-                        hintText: 'コメントを入力...',
-                        hintStyle: TextStyle(color: textColor.withAlpha(128)),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(24),
-                          borderSide: BorderSide(color: textColor.withAlpha(51)),
-                        ),
-                        enabledBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(24),
-                          borderSide: BorderSide(color: textColor.withAlpha(51)),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(24),
-                          borderSide: BorderSide(color: textColor.withAlpha(102)),
-                        ),
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                        fillColor: textColor.withAlpha(13),
-                        filled: true,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  IconButton(
-                    onPressed: _isSubmitting ? null : _submitComment,
-                    icon: _isSubmitting
-                        ? SizedBox(
-                            width: 24,
-                            height: 24,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: textColor,
-                            ),
-                          )
-                        : Icon(Icons.send, color: textColor),
-                  ),
-                ],
+                        );
+                      }).toList(),
+                  ],
+                ),
               ),
-            ),
+              Container(
+                decoration: BoxDecoration(
+                  color: backgroundColor,
+                ),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: SafeArea(
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: _commentController,
+                          style: TextStyle(color: textColor),
+                          decoration: InputDecoration(
+                            hintText: 'コメントを入力...',
+                            hintStyle:
+                                TextStyle(color: textColor.withAlpha(128)),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(24),
+                              borderSide:
+                                  BorderSide(color: textColor.withAlpha(51)),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(24),
+                              borderSide:
+                                  BorderSide(color: textColor.withAlpha(51)),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(24),
+                              borderSide:
+                                  BorderSide(color: textColor.withAlpha(102)),
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 16, vertical: 12),
+                            fillColor: textColor.withAlpha(13),
+                            filled: true,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      IconButton(
+                        onPressed: _isSubmitting ? null : _submitComment,
+                        icon: _isSubmitting
+                            ? SizedBox(
+                                width: 24,
+                                height: 24,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: textColor,
+                                ),
+                              )
+                            : Icon(Icons.send, color: textColor),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
-    ),
-  ),
-);
-
+    );
   }
-  
 }
-
