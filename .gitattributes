@@ -1,5 +1,7 @@
 Makefile linguist-generated
 CMakeLists.txt linguist-generated
+*/Makefile linguist-generated
+*/CMakeLists.txt linguist-generated
 .cmake linguist-generated
 *.kts linguist-generated
 *.swift linguist-generated
