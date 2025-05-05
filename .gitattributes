@@ -1,17 +1,32 @@
+# Make - mainly build configures
 Makefile linguist-generated
-CMakeLists.txt linguist-generated
 */Makefile linguist-generated
+*.frag linguist-generated
+*.am linguist-generated
+
+# CMake - mainly build configures
+CMakeLists.txt linguist-generated
 */CMakeLists.txt linguist-generated
-.cmake linguist-generated
+*.cmake linguist-generated
+
+# Kotlin - mainly build outputs
 *.kts linguist-generated
+
+# Swift - mainly build outputs
 *.swift linguist-generated
+
+# C/C++ - mainly build outputs
 *.cc linguist-generated
 *.cpp linguist-generated
 *.c linguist-generated
 *.h linguist-generated
+
+# JavaScript/HTML/CSS/Wasm - mainly build outputs
 *.js linguist-generated
 *.mjs linguist-generated
 *.html linguist-generated
 *.css linguist-generated
 *.wasm linguist-generated
+
+# Others
 *.json linguist-generated
