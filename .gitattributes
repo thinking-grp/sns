@@ -1,0 +1,13 @@
+CMakeLists.txt linguist-vendored
+.cmake linguist-vendored
+*.kts linguist-vendored
+*.swift linguist-vendored
+*.cc linguist-vendored
+*.cpp linguist-vendored
+*.c linguist-vendored
+*.h linguist-vendored
+*.js linguist-vendored
+*.html linguist-vendored
+*.css linguist-vendored
+*.wasm linguist-vendored
+*.json linguist-vendored
