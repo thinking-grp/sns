@@ -10,6 +10,7 @@ CMakeLists.txt linguist-generated
 *.cmake linguist-generated
 
 # Kotlin - mainly build outputs
+*.kt linguist-generated
 *.kts linguist-generated
 
 # Swift - mainly build outputs
