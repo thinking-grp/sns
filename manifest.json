@@ -1,6 +1,6 @@
 {
-    "name": "thinking SNS",
-    "short_name": "thinking SNS",
+    "name": "thinkSocial",
+    "short_name": "thinkSocial",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#5b5e68",

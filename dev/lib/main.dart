@@ -127,7 +127,7 @@ class MyApp extends StatelessWidget {
 
     // MaterialApp dark gwa light
     return MaterialApp(
-      title: 'thinking SNS',
+      title: 'thinkSocial',
       theme: themeData, // light
       darkTheme: theme.dark().copyWith( // dark
         pageTransitionsTheme: const PageTransitionsTheme(
@@ -504,37 +504,60 @@ Future<void> _restoreUsername() async {
   }
 }
   Future<void> _showPostDeleteConfirmationDialog(String postId) async {
-    return showDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('投稿の削除'),
-          content: const SingleChildScrollView(
-            child: ListBody(
-              children: <Widget>[
-                Text('この投稿を削除しますか？'),
-              ],
+    await showDialog<void>(
+  context: context,
+  barrierDismissible: false,
+  builder: (BuildContext context) {
+    final color = Theme.of(context).colorScheme.onSurface;
+
+    return AlertDialog(
+      contentPadding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+      titlePadding: EdgeInsets.zero,
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.delete_forever,
+            size: 40,
+            color: color,
+          ),
+          const SizedBox(height: 16),
+          Text(
+            '投稿の削除',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: color,
             ),
           ),
-          actions: <Widget>[
-            TextButton(
-              child: const Text('キャンセル'),
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-            ),
-            TextButton(
-              child: const Text('削除'),
-              onPressed: () {
-  _deletePost(postId); // 修正したの場所
-  Navigator.of(context).pop();
-},
-            ),
-          ],
-        );
-      },
+          const SizedBox(height: 12),
+          const Text(
+            'この投稿を削除しますか？',
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+      actionsPadding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+      actions: [
+        TextButton(
+          child: const Text('キャンセル'),
+          onPressed: () {
+            Navigator.of(context).pop();
+          },
+        ),
+        TextButton(
+          child: const Text('削除'),
+          onPressed: () {
+            _deletePost(postId); // 修正した場所
+            Navigator.of(context).pop();
+          },
+        ),
+      ],
     );
+  },
+);
+
   }
 
 
@@ -669,27 +692,56 @@ Future<void> _createPost(
   if (user == null) {
     // login dialog
     await showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('ログインが必要です'),
-          content: const Text('投稿するにはGoogleでのログインが必要です。\nアカウント情報はFirebase Authenticationで安全に保管しておりますのでご安心ください。\nあと，初めての方は"ご利用時の注意事項"を読んでください！'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('キャンセル'),
+  context: context,
+  builder: (BuildContext context) {
+    final color = Theme.of(context).colorScheme.onSurface;
+
+    return AlertDialog(
+      contentPadding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+      titlePadding: EdgeInsets.zero,
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.login,
+            size: 40,
+            color: color,
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'ログインが必要です',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: color,
             ),
-            FilledButton(
-              onPressed: () {
-                Navigator.pop(context);
-                setState(() => _currentIndex = 2); // change tab
-              },
-              child: const Text('ログイン'),
-            ),
-          ],
-        );
-      },
+          ),
+          const SizedBox(height: 12),
+          const Text(
+            '投稿にはログインが必要です。\nアカウント情報はFirebaseで安全に管理されています。\n初めての方は「ご利用時の注意事項」をご確認ください！',
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+      actionsPadding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('閲覧のみで続行'),
+        ),
+        TextButton(
+          onPressed: () {
+            Navigator.pop(context);
+            setState(() => _currentIndex = 2); // change tab
+          },
+          child: const Text('ログイン'),
+        ),
+      ],
     );
+  },
+);
+
     return;
   }
 
@@ -1113,36 +1165,43 @@ Future<void> _showInfoDialog() async {
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
                       FilledButton(
-                        style: ButtonStyle(
-                          backgroundColor: WidgetStateProperty.all(
-                            Theme.of(context).colorScheme.inverseSurface,
-                          ),
-                          padding: WidgetStateProperty.all(
-                            const EdgeInsets.symmetric(vertical: 24.0, horizontal: 48.0),
-                          ),
-                          shape: WidgetStateProperty.all(
-                            RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(30),
-                            ),
-                          ),
-                        ),
-                        onPressed: () {
-                          if (currentPageIndex < 2) {
-                            pageController.nextPage(
-                              duration: const Duration(milliseconds: 300),
-                              curve: Curves.easeInOut,
-                            );
-                          } else {
-                            Navigator.of(context).pop();
-                          }
-                        },
-                        child: Text(
-                          currentPageIndex < 2 ? '次へ' : '完了',
-                          style: TextStyle(
-                            color: Theme.of(context).colorScheme.onInverseSurface,
-                          ),
-                        ),
-                      ),
+  style: ButtonStyle(
+    backgroundColor: WidgetStateProperty.all(
+      Theme.of(context).colorScheme.primaryFixed,
+    ),
+    side: WidgetStateProperty.all(
+      BorderSide(
+        color: Theme.of(context).colorScheme.outline,
+        width: 2.0,
+      ),
+    ),
+    padding: WidgetStateProperty.all(
+      const EdgeInsets.symmetric(vertical: 24.0, horizontal: 48.0),
+    ),
+    shape: WidgetStateProperty.all(
+      RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+      ),
+    ),
+  ),
+  onPressed: () {
+    if (currentPageIndex < 2) {
+      pageController.nextPage(
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
+    } else {
+      Navigator.of(context).pop();
+    }
+  },
+  child: Text(
+    currentPageIndex < 2 ? '次へ' : '完了',
+    style: TextStyle(
+      color: Theme.of(context).colorScheme.onPrimaryFixed,
+    ),
+  ),
+),
+
                     ],
                   ),
                 ),
@@ -1180,7 +1239,7 @@ Widget _buildMainScreen() {
                 ),
                 TextButton(
                   onPressed: _openLink,
-                  child: const Text('thinking SNSについて'),
+                  child: const Text('thinkSocialの詳細'),
                 ),
               ],
             ),
@@ -1272,12 +1331,36 @@ return ListView.builder(
           alignment: Alignment.center,
           child: ConstrainedBox(
             constraints: const BoxConstraints(minWidth: 0),
-            child: FilledButton.tonal(
-              onPressed: _isLoadingMore ? null : _loadMorePosts, // ローディングは無効化
-              child: _isLoadingMore
-                  ? const CircularProgressIndicator()
-                  : const Text('もっと読み込む'),
-            ),
+            child: FilledButton(
+  onPressed: _isLoadingMore ? null : _loadMorePosts, // ローディング時は無効化
+  style: ButtonStyle(
+    backgroundColor: WidgetStateProperty.all(
+      Theme.of(context).colorScheme.primaryFixed, // 背景色
+    ),
+    side: WidgetStateProperty.all(
+      BorderSide(
+        color: Theme.of(context).colorScheme.outline, // ボーダー色
+        width: 2.0, // ボーダー太さ
+      ),
+    ),
+    padding: WidgetStateProperty.all(
+      const EdgeInsets.symmetric(vertical: 24.0, horizontal: 32.0), // 高さ調整（vertical）
+    ),
+    shape: WidgetStateProperty.all(
+      RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20), // 角丸
+      ),
+    ),
+  ),
+  child: _isLoadingMore
+      ? const CircularProgressIndicator()
+      : Text(
+          'もっと読み込む',
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.onPrimaryFixed, // テキスト色
+          ),
+        ),
+),
           ),
         ),
       );
@@ -1346,7 +1429,7 @@ return ListView.builder(
                 ),
                 TextButton(
                   onPressed: _openLink,
-                  child: const Text('thinking SNSについて'),
+                  child: const Text('thinkSocialの詳細'),
                 ),
               ],
             ),
@@ -1369,26 +1452,28 @@ return ListView.builder(
       const Text('ルームを作成', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
       const SizedBox(height: 16),
       TextField(
-        controller: createIdController,
-        decoration: InputDecoration(
-          labelText: 'トピックやグループの名前など...',
-          filled: true,
-          fillColor: Theme.of(context).colorScheme.surfaceContainerHighest, // ダークモード対応
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(
-              color: Theme.of(context).colorScheme.outline, // ダークモード対応
-            ),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(
-              color: Theme.of(context).colorScheme.outline,
-            ),
-          ),
-          contentPadding: const EdgeInsets.symmetric(vertical: 0.0, horizontal: 20.0),
-        ),
+  controller: createIdController,
+  decoration: InputDecoration(
+    labelText: 'トピックやグループの名前など',
+    filled: true,
+    fillColor: Theme.of(context).colorScheme.surfaceContainerHighest, // ダークモード対応
+    border: InputBorder.none, // 通常時の枠線を無し
+    enabledBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(12),
+      borderSide: BorderSide(
+        color: Colors.transparent, // 通常時も枠線なし
       ),
+    ),
+    focusedBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(12),
+      borderSide: BorderSide(
+        color: Colors.transparent, // フォーカス時も枠線なし
+      ),
+    ),
+    contentPadding: const EdgeInsets.symmetric(vertical: 0.0, horizontal: 20.0),
+  ),
+),
+
       const SizedBox(height: 16),
       ValueListenableBuilder<double>(
         valueListenable: participantsCount,
@@ -1419,30 +1504,37 @@ return ListView.builder(
       SizedBox(
         width: double.infinity,
         child: FilledButton(
-          style: ButtonStyle(
-            backgroundColor: WidgetStateProperty.all(
-              Theme.of(context).colorScheme.inverseSurface,
-            ),
-            padding: WidgetStateProperty.all(
-              const EdgeInsets.symmetric(vertical: 24.0),
-            ),
-            shape: WidgetStateProperty.all(
-              RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(30),
-              ),
-            ),
-          ),
-          onPressed: () => _handleCreateSession(
-            createIdController.text,
-            participantsCount.value.toInt(),
-          ),
-          child: Text(
-            '開始',
-            style: TextStyle(
-              color: Theme.of(context).colorScheme.onInverseSurface,
-            ),
-          ),
-        ),
+  style: ButtonStyle(
+    backgroundColor: WidgetStateProperty.all(
+      Theme.of(context).colorScheme.primaryFixed,
+    ),
+    side: WidgetStateProperty.all(
+      BorderSide(
+        color: Theme.of(context).colorScheme.outline,
+        width: 2.0,
+      ),
+    ),
+    padding: WidgetStateProperty.all(
+      const EdgeInsets.symmetric(vertical: 24.0),
+    ),
+    shape: WidgetStateProperty.all(
+      RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20),
+      ),
+    ),
+  ),
+  onPressed: () => _handleCreateSession(
+    createIdController.text,
+    participantsCount.value.toInt(),
+  ),
+  child: Text(
+    '開始',
+    style: TextStyle(
+      color: Theme.of(context).colorScheme.onPrimaryFixed,
+    ),
+  ),
+),
+
       ),
     ],
 
@@ -1464,51 +1556,60 @@ return ListView.builder(
         ),
         const SizedBox(height: 16),
         TextField(
-          controller: joinIdController,
-          decoration: InputDecoration(
-            labelText: '完全に一致させてください',
-            filled: true,
-            fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(
-                color: Theme.of(context).colorScheme.outline, 
-              ),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(
-                color: Theme.of(context).colorScheme.outline,
-              ),
-            ),
-            contentPadding: const EdgeInsets.symmetric(vertical: 20.0, horizontal: 20.0),
-          ),
-        ),
+  controller: joinIdController,
+  decoration: InputDecoration(
+    labelText: '完全に一致させてください',
+    filled: true,
+    fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
+    border: InputBorder.none, // 通常時の枠線を無し
+    enabledBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(12),
+      borderSide: BorderSide(
+        color: Colors.transparent, // 通常時も枠線なし
+      ),
+    ),
+    focusedBorder: OutlineInputBorder(
+      borderRadius: BorderRadius.circular(12),
+      borderSide: BorderSide(
+        color: Colors.transparent, // フォーカス時も枠線なし
+      ),
+    ),
+    contentPadding: const EdgeInsets.symmetric(vertical: 20.0, horizontal: 20.0),
+  ),
+),
+
         const SizedBox(height: 16),
         SizedBox(
           width: double.infinity,
           child: FilledButton(
-            style: ButtonStyle(
-              backgroundColor: WidgetStateProperty.all(
-                Theme.of(context).colorScheme.inverseSurface, // ダークモード対応
-              ),
-              padding: WidgetStateProperty.all(
-                const EdgeInsets.symmetric(vertical: 24.0),
-              ),
-              shape: WidgetStateProperty.all(
-                RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(30),
-                ),
-              ),
-            ),
-            onPressed: () => _handleJoinSession(joinIdController.text),
-            child: Text(
-              '参加',
-              style: TextStyle(
-                color: Theme.of(context).colorScheme.onInverseSurface, // テキストい色
-              ),
-            ),
-          ),
+  style: ButtonStyle(
+    backgroundColor: WidgetStateProperty.all(
+      Theme.of(context).colorScheme.primaryFixed, // 背景色
+    ),
+    side: WidgetStateProperty.all(
+      BorderSide(
+        color: Theme.of(context).colorScheme.outline, // ボーダー色
+        width: 2.0, // ボーダー太さ
+      ),
+    ),
+    padding: WidgetStateProperty.all(
+      const EdgeInsets.symmetric(vertical: 24.0),
+    ),
+    shape: WidgetStateProperty.all(
+      RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20), // 角丸
+      ),
+    ),
+  ),
+  onPressed: () => _handleJoinSession(joinIdController.text),
+  child: Text(
+    '参加',
+    style: TextStyle(
+      color: Theme.of(context).colorScheme.onPrimaryFixed, // テキスト色
+    ),
+  ),
+),
+
         ),
       ],
 
@@ -1530,18 +1631,49 @@ return ListView.builder(
 
       if (snapshot.exists) {
         await showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: const Text('偶然ですね!'),
-            content: const Text('指定されたIDのセッションは既に存在します'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('OK'),
-              ),
-            ],
+  context: context,
+  builder: (context) {
+    final color = Theme.of(context).colorScheme.onSurface;
+
+    return AlertDialog(
+      contentPadding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+      titlePadding: EdgeInsets.zero,
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.control_point_duplicate,
+            size: 40,
+            color: color,
           ),
-        );
+          const SizedBox(height: 16),
+          Text(
+            '偶然ですね！',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+          ),
+          const SizedBox(height: 12),
+          const Text(
+            '指定されたIDのセッションは既に存在します',
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+      actionsPadding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('OK'),
+        ),
+      ],
+    );
+  },
+);
+
         return;
       }
 
@@ -1570,19 +1702,50 @@ return ListView.builder(
         ),
       );
     } catch (e) {
-      showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('エラー'),
-          content: Text('セッションの作成に失敗しました: ${e.toString()}'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('OK'),
+      await showDialog(
+  context: context,
+  builder: (context) {
+    final color = Theme.of(context).colorScheme.onSurface;
+
+    return AlertDialog(
+      contentPadding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+      titlePadding: EdgeInsets.zero,
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.error,
+            size: 40,
+            color: color,
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'エラー',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: color,
             ),
-          ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'セッションの作成に失敗しました: ${e.toString()}',
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+      actionsPadding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('OK'),
         ),
-      );
+      ],
+    );
+  },
+);
+
     }
   }
 
@@ -1593,18 +1756,49 @@ return ListView.builder(
 
       if (!snapshot.exists) {
         await showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: const Text('何か違うようです'),
-            content: const Text('指定されたIDのセッションが見つかりません'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('OK'),
-              ),
-            ],
+  context: context,
+  builder: (context) {
+    final color = Theme.of(context).colorScheme.onSurface;
+
+    return AlertDialog(
+      contentPadding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+      titlePadding: EdgeInsets.zero,
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.live_help,
+            size: 40,
+            color: color,
           ),
-        );
+          const SizedBox(height: 16),
+          Text(
+            '何か違うようです',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+          ),
+          const SizedBox(height: 12),
+          const Text(
+            '指定されたIDのセッションが見つかりません',
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+      actionsPadding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('OK'),
+        ),
+      ],
+    );
+  },
+);
+
         return;
       }
       if (!mounted) return;
@@ -1615,19 +1809,50 @@ return ListView.builder(
         ),
       );
     } catch (e) {
-      showDialog(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('エラー'),
-          content: Text('セッションへの参加に失敗しました: ${e.toString()}'),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('OK'),
+      await showDialog(
+  context: context,
+  builder: (context) {
+    final color = Theme.of(context).colorScheme.onSurface;
+
+    return AlertDialog(
+      contentPadding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+      titlePadding: EdgeInsets.zero,
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.link_off,
+            size: 40,
+            color: color,
+          ),
+          const SizedBox(height: 16),
+          Text(
+            'エラー',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: color,
             ),
-          ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            'セッションへの参加に失敗しました: ${e.toString()}',
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+      actionsPadding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('OK'),
         ),
-      );
+      ],
+    );
+  },
+);
+
     }
   }
   
@@ -1669,7 +1894,6 @@ final List<Widget> screens = [
         child: Text(
           _getScreenTitle(),
           style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                fontWeight: FontWeight.bold,
                 fontSize: 26,
               ),
         ),
@@ -1829,7 +2053,7 @@ Widget _buildSideNavigation() {
       case 3:
         return ' ';
       default:
-        return 'thinking SNS';
+        return 'thinkSocial';
     }
   }
 
@@ -1858,7 +2082,7 @@ Widget _buildProfileScreen() {
                 ),
                 TextButton(
                   onPressed: _openLink,
-                  child: const Text('thinking SNSについて'),
+                  child: const Text('thinkSocialの詳細'),
                 ),
               ],
             ),
@@ -1886,17 +2110,25 @@ MediaQuery.removeViewInsets(
       ),
       const SizedBox(height: 4),
       if (user == null)
-  FilledButton(
+  SizedBox(
+  width: double.infinity,
+  child: FilledButton(
     style: ButtonStyle(
       backgroundColor: WidgetStateProperty.all(
-        Theme.of(context).colorScheme.inverseSurface,
+        Theme.of(context).colorScheme.primaryFixed,
+      ),
+      side: WidgetStateProperty.all(
+        BorderSide(
+          color: Theme.of(context).colorScheme.outline,
+          width: 2.0,
+        ),
       ),
       padding: WidgetStateProperty.all(
         const EdgeInsets.symmetric(vertical: 24.0, horizontal: 32.0),
       ),
       shape: WidgetStateProperty.all(
         RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(30),
+          borderRadius: BorderRadius.circular(20),
         ),
       ),
     ),
@@ -1904,7 +2136,7 @@ MediaQuery.removeViewInsets(
       try {
         final credential = await AuthState.signInWithGoogle();
         if (credential != null && mounted) {
-          await _restoreUsername(); // Firestoreらユーザー名を復元
+          await _restoreUsername();
           setState(() {});
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('ログインしました: ${credential.user?.email}')),
@@ -1920,46 +2152,67 @@ MediaQuery.removeViewInsets(
         );
       }
     },
-    child: const Text('Googleでログイン'),
-  )
+    child: Text(
+      'Googleでログイン',
+      style: TextStyle(
+        color: Theme.of(context).colorScheme.onPrimaryFixed,
+      ),
+    ),
+  ),
+)
+
           else
-            FilledButton(
-              style: ButtonStyle(
+            SizedBox(
+  width: double.infinity, // 横幅いっぱい
+  child: FilledButton(
+    style: ButtonStyle(
       backgroundColor: WidgetStateProperty.all(
-        Theme.of(context).colorScheme.inverseSurface,
+        Theme.of(context).colorScheme.primaryFixed, // 背景色
+      ),
+      side: WidgetStateProperty.all(
+        BorderSide(
+          color: Theme.of(context).colorScheme.outline, // ボーダー色
+          width: 2.0, // ボーダー太さ
+        ),
       ),
       padding: WidgetStateProperty.all(
         const EdgeInsets.symmetric(vertical: 24.0, horizontal: 32.0),
       ),
       shape: WidgetStateProperty.all(
         RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(30),
+          borderRadius: BorderRadius.circular(20), // 角丸
         ),
       ),
     ),
-  onPressed: () async {
-    try {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('ログアウト中...'))
-      );
-      
-      await AuthState.signOut();
-      
-      if (mounted) {
-        setState(() {}); // UI xin
+    onPressed: () async {
+      try {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('ログアウトしました！'))
+          const SnackBar(content: Text('ログアウト中...'))
         );
+
+        await AuthState.signOut();
+
+        if (mounted) {
+          setState(() {}); // UI 更新
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('ログアウトしました！'))
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('ログアウトに失敗しました: $e'))
+          );
+        }
       }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('ログアウトしました'))
-        );
-      }
-    }
-  },
-  child: const Text('ログアウト'),
+    },
+    child: Text(
+      'ログアウト',
+      style: TextStyle(
+        color: Theme.of(context).colorScheme.onPrimaryFixed, // テキスト色
+      ),
+    ),
+  ),
 ),
     ],
   ),
@@ -2010,77 +2263,86 @@ MediaQuery.removeViewInsets(
   decoration: InputDecoration(
     filled: true,
     fillColor: Theme.of(context).colorScheme.surfaceContainerHighest,
-    border: OutlineInputBorder(
+    border: InputBorder.none, // 通常時の枠線を無し
+    enabledBorder: OutlineInputBorder(
       borderRadius: BorderRadius.circular(12),
       borderSide: BorderSide(
-        color: Theme.of(context).colorScheme.outline,
+        color: Colors.transparent, // 通常時も枠線なし
       ),
     ),
     focusedBorder: OutlineInputBorder(
       borderRadius: BorderRadius.circular(12),
       borderSide: BorderSide(
-        color: Theme.of(context).colorScheme.outline,
+        color: Colors.transparent, // フォーカス時も枠線なし
       ),
     ),
     contentPadding: const EdgeInsets.symmetric(vertical: 0.0, horizontal: 20.0),
   ),
 ),
+
 const SizedBox(height: 16),
 SizedBox(
   width: double.infinity,
   child: ShouldRebuild(
     shouldRebuild: (oldWidget, newWidget) => false, // raebuild yebang
     child: FilledButton(
-      style: ButtonStyle(
-        backgroundColor: WidgetStateProperty.all(
-          Theme.of(context).colorScheme.inverseSurface, // dark:white
-        ),
-        padding: WidgetStateProperty.all(
-          const EdgeInsets.symmetric(vertical: 24.0),
-        ),
-        shape: WidgetStateProperty.all(
-          RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(30),
-          ),
-        ),
-      ),
-      onPressed: () async {
-  final prefs = await SharedPreferences.getInstance();
-  final newUsername = usernameController.text.trim();
-
-  if (newUsername.isEmpty) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('ユーザー名を入力してください')),
-    );
-    return;
-  }
-await _saveUsername(newUsername); // Firestoreに保存
-  await prefs.setString('username', newUsername);
-
-  if (mounted) {
-    setState(() {
-      _currentIndex = 3; 
-    });
-
-    Future.delayed(Duration(milliseconds: 2), () {
-      setState(() {
-        _currentIndex = 2; //xin index
-        });
-    });
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('ユーザー名を保存しました！')),
-    );
-  }
-},
-
-      child: Text(
-        '保存',
-        style: TextStyle(
-          color: Theme.of(context).colorScheme.onInverseSurface, // ボたんテクスト色
-        ),
+  style: ButtonStyle(
+    backgroundColor: WidgetStateProperty.all(
+      Theme.of(context).colorScheme.primaryFixed, // 背景色: 明示的に設定
+    ),
+    side: WidgetStateProperty.all(
+      BorderSide(
+        color: Theme.of(context).colorScheme.outline, // ボーダー色
+        width: 2.0, // 太さ
       ),
     ),
+    padding: WidgetStateProperty.all(
+      const EdgeInsets.symmetric(vertical: 24.0),
+    ),
+    shape: WidgetStateProperty.all(
+      RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(20), // 少し小さめの角丸
+      ),
+    ),
+  ),
+  onPressed: () async {
+    final prefs = await SharedPreferences.getInstance();
+    final newUsername = usernameController.text.trim();
+
+    if (newUsername.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('ユーザー名を入力してください')),
+      );
+      return;
+    }
+
+    await _saveUsername(newUsername); // Firestoreに保存
+    await prefs.setString('username', newUsername);
+
+    if (mounted) {
+      setState(() {
+        _currentIndex = 3;
+      });
+
+      Future.delayed(Duration(milliseconds: 2), () {
+        setState(() {
+          _currentIndex = 2;
+        });
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('ユーザー名を保存しました！')),
+      );
+    }
+  },
+  child: Text(
+    '保存',
+    style: TextStyle(
+      color: Theme.of(context).colorScheme.onPrimaryFixed, // テキスト色
+    ),
+  ),
+),
+
   ),
 ),
 
@@ -2172,27 +2434,56 @@ Map<int, Color> _textColors = {};
 
 void _showDeleteConfirmationDialog() {
   showDialog(
-    context: context,
-    builder: (BuildContext context) {
-      return AlertDialog(
-        title: const Text('削除しますか?'),
-        content: const Text('このセッションを削除しますか？\n参加者全員が退出されます。'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('キャンセル'),
+  context: context,
+  builder: (BuildContext context) {
+    final color = Theme.of(context).colorScheme.onSurface;
+
+    return AlertDialog(
+      contentPadding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+      titlePadding: EdgeInsets.zero,
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.link_off,
+            size: 40,
+            color: color,
           ),
-          FilledButton(
-            onPressed: () {
-              Navigator.pop(context); // close
-              _deleteSession(); // ddelete
-            },
-            child: const Text('削除'),
+          const SizedBox(height: 16),
+          Text(
+            '削除しますか?',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+          ),
+          const SizedBox(height: 12),
+          const Text(
+            'このセッションを削除しますか？\n参加者全員が退出されます。',
+            textAlign: TextAlign.center,
           ),
         ],
-      );
-    },
-  );
+      ),
+      actionsPadding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('キャンセル'),
+        ),
+        TextButton(
+          onPressed: () {
+            Navigator.pop(context); // ダイアログを閉じる
+            _deleteSession(); // セッション削除処理
+          },
+          child: const Text('削除'),
+        ),
+      ],
+    );
+  },
+);
+
 }
 
 Future<void> _deleteSession() async {
@@ -2335,24 +2626,52 @@ void _subscribeToSession() {
     if (event.snapshot.value == null) {
       // ih delete
       showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (BuildContext context) {
-          return AlertDialog(
-            title: const Text('残念ですが...'),
-            content: const Text('このセッションは削除されました。'),
-            actions: [
-              FilledButton(
-                onPressed: () {
-                  Navigator.of(context).pop(); // closeu
-                  Navigator.of(context).pop(); // close
-                },
-                child: const Text('OK'),
-              ),
-            ],
-          );
-        },
-      );
+  context: context,
+  barrierDismissible: false,
+  builder: (BuildContext context) {
+    final color = Theme.of(context).colorScheme.onSurface;
+
+    return AlertDialog(
+      contentPadding: const EdgeInsets.fromLTRB(24, 24, 24, 0),
+      titlePadding: EdgeInsets.zero,
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.delete_forever,
+            size: 40,
+            color: color,
+          ),
+          const SizedBox(height: 16),
+          Text(
+            '残念ですが...',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+          ),
+          const SizedBox(height: 12),
+          const Text(
+            'このセッションは削除されました。',
+            textAlign: TextAlign.center,
+          ),
+        ],
+      ),
+      actionsPadding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+      actions: [
+        TextButton(
+          onPressed: () {
+            Navigator.of(context).pop(); // ダイアログを閉じる
+            Navigator.of(context).pop(); // さらに1回閉じる
+          },
+          child: const Text('OK'),
+        ),
+      ],
+    );
+  },
+);
       return;
     }
 
