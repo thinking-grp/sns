@@ -31,6 +31,9 @@ CMakeLists.txt linguist-generated
 
 # Others
 *.json linguist-generated
+*.yaml linguist-generated
+*.iml linguist-generated
+*.properties linguist-generated
 *.bin linguist-generated
 *.symbols linguist-generated
 .DS_Store linguist-generated
