@@ -38,3 +38,8 @@ CMakeLists.txt linguist-generated
 *.symbols linguist-generated
 .DS_Store linguist-generated
 */.DS_Store linguist-generated
+*.lock linguist-generated
+*.rc linguist-generated
+*.entitlements linguist-generated
+*.dill linguist-generated
+*.plist linguist-generated
