@@ -31,3 +31,7 @@ CMakeLists.txt linguist-generated
 
 # Others
 *.json linguist-generated
+*.bin linguist-generated
+*.symbols linguist-generated
+.DS_Store linguist-generated
+*/.DS_Store linguist-generated
