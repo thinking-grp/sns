@@ -29,17 +29,29 @@ CMakeLists.txt linguist-generated
 *.css linguist-generated
 *.wasm linguist-generated
 
-# Others
+# Data Langs
 *.json linguist-generated
 *.yaml linguist-generated
-*.iml linguist-generated
+
+# Configs
 *.properties linguist-generated
-*.bin linguist-generated
-*.symbols linguist-generated
+*.iml linguist-generated
+*.lock linguist-generated
+
+# Apple Trashies
 .DS_Store linguist-generated
 */.DS_Store linguist-generated
-*.lock linguist-generated
+*.plist linguist-generated
+*.storyboard linguist-generated
+*.pbxproj linguist-generated
+*.xcworkspacedata linguist-generated
+*.xcsettings linguist-generated
+*.xcconfig linguist-generated
+
+# Others
+*.bin linguist-generated
+*.symbols linguist-generated
 *.rc linguist-generated
 *.entitlements linguist-generated
 *.dill linguist-generated
-*.plist linguist-generated
+*.ico linguist-generated
