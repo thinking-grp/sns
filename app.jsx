@@ -6,8 +6,60 @@ firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 const auth = firebase.auth();
 const googleProvider = new firebase.auth.GoogleAuthProvider();
-const REACTIONS = ['❤️', '👏', '🤔', '🤝', '✅'];
+const REACTIONS = [
+  { id: 'like', label: 'like', icon: 'assets/assets/icons/reaction_like.svg' },
+  { id: 'clap', label: 'clap', icon: 'assets/assets/icons/reaction_clap.svg' },
+  { id: 'thinking', label: 'thinking', icon: 'assets/assets/icons/reaction_thinking.svg' },
+  { id: 'handshake', label: 'handshake', icon: 'assets/assets/icons/reaction_handshake.svg' },
+  { id: 'check', label: 'check', icon: 'assets/assets/icons/reaction_check.svg' }
+];
 const POST_DOC_REF = db.collection('post-1').doc('wsbxPa2kQDaexLV9hiVC');
+
+const COLOR_SETS = [
+  { bg: '#ffffff', color: '#000000' },
+  { bg: '#000000', color: '#ffffff' },
+  { bg: '#c9deff', color: '#091933' },
+  { bg: '#091933', color: '#c9deff' },
+  { bg: '#fffcde', color: '#1c211e' },
+  { bg: '#1c211e', color: '#fffcde' },
+  { bg: '#1a1b1f', color: '#69ffff' },
+  { bg: '#69ffff', color: '#1a1b1f' },
+  { bg: '#5c0f09', color: '#ffeec9' },
+  { bg: '#ffeec9', color: '#5c0f09' }
+];
+
+function randomColorSet() {
+  return COLOR_SETS[Math.floor(Math.random() * COLOR_SETS.length)];
+}
+
+const BgImgList = [
+  { id: 'none', label: 'なし', path: '' },
+  { id: 'blue-sky', label: '青空', path: 'assets/assets/bgimg/blue-sky.svg' },
+  { id: 'cold', label: '寒い', path: 'assets/assets/bgimg/cold.svg' },
+  { id: 'done', label: '完了', path: 'assets/assets/bgimg/done.svg' },
+  { id: 'happy', label: '嬉しい', path: 'assets/assets/bgimg/happy.svg' },
+  { id: 'hot', label: '暑い', path: 'assets/assets/bgimg/hot.svg' },
+  { id: 'leaves', label: '紅葉', path: 'assets/assets/bgimg/leaves.svg' },
+  { id: 'new-year', label: '新年', path: 'assets/assets/bgimg/new-year.svg' },
+  { id: 'spring', label: '春', path: 'assets/assets/bgimg/spring.svg' },
+  { id: 'thinking', label: '思考', path: 'assets/assets/bgimg/thinking.svg' },
+  { id: 'wansui', label: '万歳', path: 'assets/assets/bgimg/wansui.svg' }
+];
+
+function getCardStyle(data) {
+  const rawImg = data.bgimg ? fixBgPath(data.bgimg) : null;
+  const bgImg = rawImg ? `url(${rawImg})` : undefined;
+  return {
+    background: bgImg ? `${data.bg || '#fff'} ${bgImg} center/cover no-repeat` : (data.bg || '#fff'),
+    color: data.color || '#000'
+  };
+}
+
+function fixBgPath(path) {
+  if (!path) return path;
+  if (path.startsWith('assets/bgimg/')) return 'assets/assets/bgimg/' + path.replace('assets/bgimg/', '');
+  return path;
+}
 
 function formatDate(timestamp) {
   if (!timestamp) return '';
@@ -88,16 +140,17 @@ function PostDetail({ postId, data, open, onClose, onRefresh }) {
         <span style={{ fontSize: 16, fontWeight: 600 }}>投稿</span>
       </div>
       <div style={{ flex: 1, overflow: 'auto', padding: '16px 20px', paddingBottom: 80 }}>
-        <div style={{ padding: 16, background: data.bg || '#fff', color: data.color || '#000', borderRadius: 24, marginBottom: 16 }}>
+        <div style={{ padding: 16, ...getCardStyle(data), borderRadius: 24, marginBottom: 16 }}>
           {data.username && <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 6 }}>{data.username}</div>}
           <div style={{ fontSize: 16, lineHeight: 1.6 }}>{data.delay ? (data.text || 'テキストなし') : (data.text || 'テキストなし')}</div>
           <div style={{ fontSize: 12, color: data.color || '#000', opacity: 0.5, marginTop: 8 }}>{formatDate(data.createdAt)}</div>
           <div style={{ marginTop: 8, display: 'flex', flexWrap: 'wrap', gap: 4 }}>
             {REACTIONS.map(r => {
-              const isClicked = clickedReactions.includes(r);
+              const isClicked = clickedReactions.includes(r.id);
               return (
-                <button key={r} onClick={() => handleReaction(r)} style={{ padding: '4px 10px', border: isClicked ? 'none' : '1px solid ' + (data.bg || '#fff'), borderRadius: 999, background: isClicked ? (data.color || '#000') + 'dd' : 'transparent', color: isClicked ? (data.bg || '#fff') : (data.color || '#000'), cursor: 'pointer', fontSize: 13 }}>
-                  {r} {(data.reactions?.[r] || 0)}
+                <button key={r.id} onClick={() => handleReaction(r.id)} style={{ padding: '4px 6px', border: 'none', borderRadius: 999, background: isClicked ? (data.color || '#000') + 'dd' : 'transparent', color: isClicked ? (data.bg || '#fff') : (data.color || '#000'), cursor: 'pointer', fontSize: 13, display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <img src={r.icon} alt={r.label} style={{ width: 20, height: 20 }} />
+                  {(data.reactions?.[r.id] || 0)}
                 </button>
               );
             })}
@@ -171,17 +224,18 @@ function PostBox({ data, postId, onRefresh, onOpen }) {
   const isLong = lines >= 8 && !expanded;
 
   return (
-    <div onClick={() => onOpen(postId, data)} style={{ padding: 16, marginBottom: 12, background: data.bg || '#fff', color: data.color || '#000', borderRadius: 24, boxShadow: '0 1px 2px rgba(0,0,0,0.06)', cursor: 'pointer' }}>
+    <div onClick={() => onOpen(postId, data)} style={{ padding: 16, marginBottom: 12, ...getCardStyle(data), borderRadius: 24, boxShadow: '0 1px 2px rgba(0,0,0,0.06)', cursor: 'pointer' }}>
       {data.username && <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4 }}>{data.username}</div>}
       <div style={{ fontSize: 15, lineHeight: 1.6, whiteSpace: 'pre-wrap', overflow: 'hidden', maxHeight: isLong ? 'calc(1.6em * 8)' : 'none' }}>{displayedText}</div>
       {isLong && <div style={{ fontSize: 13, color: data.color || '#000', opacity: 0.5, marginTop: 4 }} onClick={e => { e.stopPropagation(); setExpanded(true); }}>...続きを見る</div>}
       <div style={{ fontSize: 12, color: data.color || '#000', opacity: 0.5, marginTop: 4 }}>{formatDate(data.createdAt)}</div>
       <div style={{ marginTop: 8, display: 'flex', flexWrap: 'wrap', gap: 4 }} onClick={e => e.stopPropagation()}>
         {REACTIONS.map(r => {
-          const isClicked = clickedReactions.includes(r);
+          const isClicked = clickedReactions.includes(r.id);
           return (
-            <button key={r} onClick={(e) => handleReaction(e, r)} style={{ padding: '4px 10px', border: isClicked ? 'none' : '1px solid ' + (data.bg || '#fff'), borderRadius: 999, background: isClicked ? (data.color || '#000') + 'dd' : 'transparent', color: isClicked ? (data.bg || '#fff') : (data.color || '#000'), cursor: 'pointer', fontSize: 13 }}>
-              {r} {(data.reactions?.[r] || 0)}
+            <button key={r.id} onClick={(e) => handleReaction(e, r.id)} style={{ padding: '4px 6px', border: 'none', borderRadius: 999, background: isClicked ? (data.color || '#000') + 'dd' : 'transparent', color: isClicked ? (data.bg || '#fff') : (data.color || '#000'), cursor: 'pointer', fontSize: 13, display: 'flex', alignItems: 'center', gap: 4 }}>
+              <img src={r.icon} alt={r.label} style={{ width: 20, height: 20 }} />
+              {(data.reactions?.[r.id] || 0)}
             </button>
           );
         })}
@@ -192,7 +246,7 @@ function PostBox({ data, postId, onRefresh, onOpen }) {
 
 function MiniPostBox({ data }) {
   return (
-    <div style={{ display: 'inline-block', padding: 16, marginRight: 12, background: data.bg || '#fff', color: data.color || '#000', borderRadius: 24, boxShadow: '0 1px 2px rgba(0,0,0,0.06)', fontSize: 24, fontWeight: 500 }}>
+    <div style={{ display: 'inline-block', padding: 16, marginRight: 12, ...getCardStyle(data), borderRadius: 24, boxShadow: '0 1px 2px rgba(0,0,0,0.06)', fontSize: 24, fontWeight: 500 }}>
       {data.text}
     </div>
   );
@@ -212,10 +266,14 @@ function App() {
   const [dialogTitle, setDialogTitle] = useState('');
   const [dialogContent, setDialogContent] = useState('');
   const [username, setUsername] = useState('');
+  const [editUsername, setEditUsername] = useState('');
+  const [activeTab, setActiveTab] = useState('home');
   const [text, setText] = useState('');
   const [textType, setTextType] = useState('default');
-  const [bg, setBg] = useState('#ffffff');
-  const [color, setColor] = useState('#000000');
+  const initialColors = randomColorSet();
+  const [bg, setBg] = useState(initialColors.bg);
+  const [color, setColor] = useState(initialColors.color);
+  const [bgimg, setBgimg] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [refreshKey, setRefreshKey] = useState(0);
@@ -235,6 +293,7 @@ function App() {
         const snap = await db.collection('users').doc(u.uid).get();
         if (snap.exists && snap.data().username) {
           setUsername(snap.data().username);
+          setEditUsername(snap.data().username);
         } else {
           setUsername(u.displayName || u.email || '匿名');
         }
@@ -311,21 +370,29 @@ function App() {
     }
   };
 
+  const saveUsername = async () => {
+    if (!editUsername.trim() || !user) return;
+    await db.collection('users').doc(user.uid).set({ username: editUsername }, { merge: true });
+    setUsername(editUsername);
+  };
+
   const submitPost = async () => {
     if (!text) { showDialog('すっからかん!', 'テキストを入力しましょう'); return; }
     if (textType === 'mini' && text.length !== 3) { showDialog('3文字で!', 'ミニ投稿では3文字しか投稿できません。'); return; }
     try {
       const colName = textType === 'mini' ? 'minitext' : 'maintext';
       await POST_DOC_REF.collection(colName).doc().set({
-        text, bg, color,
+        text, bg, color, bgimg,
         username: username || '匿名',
         createdAt: firebase.firestore.FieldValue.serverTimestamp(),
         reactions: {}, replies: {},
         delay: textType === 'delay'
       });
       setText('');
-      setBg('#ffffff');
-      setColor('#000000');
+      const next = randomColorSet();
+      setBg(next.bg);
+      setColor(next.color);
+      setBgimg('');
       setPostOpen(false);
       showDialog('完了!', '投稿が完了しました!');
       lastVisibleRef.current = null;
@@ -338,37 +405,63 @@ function App() {
   return (
     <ConfigProvider theme={{ token: { colorPrimary: '#000', borderRadius: 10, fontFamily: '"HarmonyOS Sans SC", -apple-system, BlinkMacSystemFont, sans-serif', padding: 18, paddingSM: 24, paddingLG: 24 } }}>
       <div style={{ padding: 24, minHeight: '100vh', background: '#f5f5f5' }}>
-        <h1 style={{ fontSize: 26, fontWeight: 600, lineHeight: '36px', marginBottom: 32 }}>thinkSocial</h1>
-        <Space style={{ marginBottom: 32 }}>
-          <Button onClick={() => setGuideOpen(true)}>ご利用時の注意事項</Button>
-          <Button href="https://thinking-grp.github.io/">thinking 公式</Button>
-        </Space>
+        <div style={{ display: 'flex', gap: 24, marginBottom: 24, borderBottom: '1px solid rgba(0,0,0,0.06)', paddingBottom: 8 }}>
+          <div onClick={() => setActiveTab('home')} style={{ fontSize: 32, fontWeight: 600, cursor: 'pointer', opacity: activeTab === 'home' ? 1 : 0.5 }}>ホーム</div>
+          <div onClick={() => setActiveTab('me')} style={{ fontSize: 32, fontWeight: 600, cursor: 'pointer', opacity: activeTab === 'me' ? 1 : 0.5 }}>私</div>
+        </div>
 
-        {!user ? (
-          <div style={{ marginBottom: 16, padding: 20, background: '#fff', borderRadius: 24, boxShadow: '0 1px 2px rgba(0,0,0,0.06)' }}>
-            <div style={{ marginBottom: 12, fontSize: 15, color: 'rgba(0,0,0,0.65)' }}>ログインすると投稿やリアクションができます</div>
-            <Button onClick={signInWithGoogle}>Googleでログイン</Button>
-          </div>
-        ) : (
-          <div style={{ marginBottom: 16 }}>
-            <Space>
-              <span>ようこそ、{username}さん</span>
-              <Button onClick={() => auth.signOut()}>ログアウト</Button>
+        {activeTab === 'home' && (
+          <>
+            <Space style={{ marginBottom: 32 }}>
+              <Button onClick={() => setGuideOpen(true)}>ご利用時の注意事項</Button>
+              <Button href="https://thinking-grp.github.io/">thinking 公式</Button>
             </Space>
-          </div>
+
+            {!user ? (
+              <div style={{ marginBottom: 16, padding: 20, background: '#fff', borderRadius: 24, boxShadow: '0 1px 2px rgba(0,0,0,0.06)' }}>
+                <div style={{ marginBottom: 12, fontSize: 15, color: 'rgba(0,0,0,0.65)' }}>ログインすると投稿やリアクションができます</div>
+                <Button onClick={signInWithGoogle}>Googleでログイン</Button>
+              </div>
+            ) : (
+              <div style={{ marginBottom: 16 }}></div>
+            )}
+
+            <div style={{ overflowX: 'auto', whiteSpace: 'nowrap', marginBottom: 16, paddingBottom: 8 }}>
+              {miniPosts.map(p => <MiniPostBox key={p.id} data={p} />)}
+            </div>
+            {posts.map(p => <PostBox key={p.id} postId={p.id} data={p} onRefresh={handleRefresh} onOpen={(id, data) => { setDetailId(id); setDetailPost(data); setDetailOpen(true); }} />)}
+            <Button block style={{ marginTop: 16 }} onClick={() => loadPosts(true)} loading={loading}>
+              もっと読み込む
+            </Button>
+
+            <button onClick={() => { const c = randomColorSet(); setBg(c.bg); setColor(c.color); setPostOpen(true); }} style={{ position: 'fixed', bottom: 32, right: 32, zIndex: 1000, height: 48, borderRadius: 24, border: '1px solid rgba(0,0,0,0.08)', background: '#fff', boxShadow: '0 4px 12px rgba(0,0,0,0.08)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, padding: '0 20px', fontSize: 15, fontWeight: 500, color: 'rgba(0,0,0,0.85)' }}>
+              <span style={{ fontSize: 20 }}>+</span> 新規投稿
+            </button>
+          </>
         )}
 
-        <div style={{ overflowX: 'auto', whiteSpace: 'nowrap', marginBottom: 16, paddingBottom: 8 }}>
-          {miniPosts.map(p => <MiniPostBox key={p.id} data={p} />)}
-        </div>
-        {posts.map(p => <PostBox key={p.id} postId={p.id} data={p} onRefresh={handleRefresh} onOpen={(id, data) => { setDetailId(id); setDetailPost(data); setDetailOpen(true); }} />)}
-        <Button block style={{ marginTop: 16 }} onClick={() => loadPosts(true)} loading={loading}>
-          もっと読み込む
-        </Button>
-
-        <button onClick={() => setPostOpen(true)} style={{ position: 'fixed', bottom: 32, right: 32, zIndex: 1000, height: 48, borderRadius: 24, border: '1px solid rgba(0,0,0,0.08)', background: '#fff', boxShadow: '0 4px 12px rgba(0,0,0,0.08)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, padding: '0 20px', fontSize: 15, fontWeight: 500, color: 'rgba(0,0,0,0.85)' }}>
-          <span style={{ fontSize: 20 }}>+</span> 新規投稿
-        </button>
+        {activeTab === 'me' && (
+          <div style={{ padding: 20, background: '#fff', borderRadius: 24, boxShadow: '0 1px 2px rgba(0,0,0,0.06)' }}>
+            {!user ? (
+              <Space direction="vertical" size={16}>
+                <div style={{ fontSize: 15, color: 'rgba(0,0,0,0.65)' }}>アカウントにログインしてください</div>
+                <Button onClick={signInWithGoogle}>Googleでログイン</Button>
+              </Space>
+            ) : (
+              <Space direction="vertical" size={16}>
+                <div>
+                  <div style={{ fontSize: 13, color: 'rgba(0,0,0,0.45)', marginBottom: 4 }}>表示名</div>
+                  <Space>
+                    <Input value={editUsername} onChange={e => setEditUsername(e.target.value)} style={{ width: 200 }} />
+                    <Button onClick={saveUsername}>保存</Button>
+                  </Space>
+                </div>
+                <div style={{ fontSize: 13, color: 'rgba(0,0,0,0.45)' }}>{user.email}</div>
+                <Button block onClick={() => auth.signOut()}>ログアウト</Button>
+              </Space>
+            )}
+          </div>
+        )}
 
         <Modal title="新規投稿" open={postOpen} onCancel={() => setPostOpen(false)} onOk={submitPost} okText="投稿" cancelText="キャンセル">
           <Input.TextArea value={text} onChange={e => setText(e.target.value)} placeholder="テキストを入力" rows={5} style={{ marginBottom: 12 }} />
@@ -381,6 +474,16 @@ function App() {
             <span>背景: <ColorPicker value={bg} onChange={(v, hex) => setBg(hex)} size="small" /></span>
             <span>文字: <ColorPicker value={color} onChange={(v, hex) => setColor(hex)} size="small" /></span>
           </Space>
+          <div style={{ marginTop: 12 }}>
+            <div style={{ fontSize: 13, color: 'rgba(0,0,0,0.45)', marginBottom: 8 }}>背景画像</div>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+              {BgImgList.map(b => (
+                <div key={b.id} onClick={() => setBgimg(b.path)} style={{ width: 48, height: 48, borderRadius: 12, border: bgimg === b.path ? '2px solid #000' : '1px solid rgba(0,0,0,0.08)', overflow: 'hidden', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#fafafa' }}>
+                  {b.path ? <img src={b.path} alt={b.label} style={{ width: '100%', height: '100%', objectFit: 'cover' }} /> : <span style={{ fontSize: 11, color: 'rgba(0,0,0,0.3)' }}>なし</span>}
+                </div>
+              ))}
+            </div>
+          </div>
         </Modal>
 
         <Modal title="ご利用時の注意事項" open={guideOpen} onCancel={() => setGuideOpen(false)} footer={<Button type="primary" onClick={() => setGuideOpen(false)}>完了</Button>}>
