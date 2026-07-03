@@ -28,7 +28,7 @@
   <div class="center">
     <!-- ログインセクション -->
 
-  <button id="openDialogButton">ご利用時の注意事項</button><button class="nobgbtn" onclick="location.href='https://thinking-grp.github.io/'">thinking 公式</button></div>
+  <button id="openDialogButton" onclick="document.getElementById('myDialog').showModal()">ご利用時の注意事項</button><button class="nobgbtn" onclick="location.href='https://thinking-grp.github.io/'">thinking 公式</button></div>
   <button id="fab" onclick="document.getElementById('post-dialog').showModal()">+</button>
 
   <dialog id="post-dialog">
@@ -67,24 +67,24 @@
 </div>
 <ul id="postList">
 </ul>
-  <md-dialog id="myDialog">
-  <div slot="headline"> ご利用時の注意事項</div>
-  <form slot="content" id="form-id" method="dialog">投稿削除について<br>投稿は容量管理のため、予告なく削除されることがあります。予めご了承ください。<br><br>個人情報の保護<br>個人情報（氏名、住所、連絡先など）は、絶対に投稿しないでください。<br><br>投稿頻度について<br>サービスの維持に影響を及ぼす可能性があるため、高すぎる頻度での読み込み・リアクションはご遠慮ください。<br><br>運営について<br>私たちは利益がないグループで運営しています。そのため、様々な制限の都合により予告なくサービスを一時停止する場合があります。<br><br>
-バグや不具合の報告<br>バグや不具合を発見した場合は、投稿を通じてお知らせいただけると助かります。
-  </form>
-  <div slot="actions">
-    <md-text-button form="form-id" value="ok">完了</md-text-button>
-  </div>
-</md-dialog>
-  <md-dialog id="dialog2">
-    <div slot="headline">おっと!</div>
-    <form slot="content" id="form2" method="dialog">
-       何かしらの問題が発生したようです。詳しくはコンソールをご確認ください。
-       </form>
-       <div slot="actions">
-         <md-text-button form="form2">閉じる</md-text-button>
-      </div>
-  </md-dialog>
+  <dialog id="myDialog">
+    <div class="dialog-header">ご利用時の注意事項</div>
+    <div class="dialog-content">
+      投稿削除について<br>投稿は容量管理のため、予告なく削除されることがあります。予めご了承ください。<br><br>個人情報の保護<br>個人情報（氏名、住所、連絡先など）は、絶対に投稿しないでください。<br><br>投稿頻度について<br>サービスの維持に影響を及ぼす可能性があるため、高すぎる頻度での読み込み・リアクションはご遠慮ください。<br><br>運営について<br>私たちは利益がないグループで運営しています。そのため、様々な制限の都合により予告なくサービスを一時停止する場合があります。<br><br>バグや不具合の報告<br>バグや不具合を発見した場合は、投稿を通じてお知らせいただけると助かります。
+    </div>
+    <div class="dialog-actions">
+      <button onclick="document.getElementById('myDialog').close()">完了</button>
+    </div>
+  </dialog>
+  <dialog id="dialog2">
+    <div class="dialog-header">おっと!</div>
+    <div class="dialog-content">
+      何かしらの問題が発生したようです。詳しくはコンソールをご確認ください。
+    </div>
+    <div class="dialog-actions">
+      <button onclick="document.getElementById('dialog2').close()">閉じる</button>
+    </div>
+  </dialog>
   <button id="loadMoreButton" style="display: none;">もっと読み込む</button>
   <div class="bottommargin"></div>
   <script type="module" src="script.js"></script>

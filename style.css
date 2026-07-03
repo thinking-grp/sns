@@ -172,7 +172,7 @@ h1 {
     z-index: 100
 }
 
-#post-dialog {
+dialog {
     border: none;
     padding: 24px;
     width: 90%;
@@ -183,12 +183,16 @@ h1 {
     transform: translate(-50%, -50%)
 }
 
-#post-dialog::backdrop {
+dialog::backdrop {
     background: rgba(0, 0, 0, 0.3)
 }
 
 .dialog-header {
     font-size: 20px;
+    margin-bottom: 16px
+}
+
+.dialog-content {
     margin-bottom: 16px
 }
 
