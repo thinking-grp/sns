@@ -25,7 +25,7 @@
 </head>
 <body>
   <div class="snstype"><button class="snstypebtn" onclick="location.href='https://thinking-grp.github.io/sns'">スレッド</button><button class="snstypebtn snstypeselect">テキスト通話</button></div>
-  <div class="pre">Beta<md-ripple></md-ripple></div>
+  <div class="pre">Beta<!--md-ripple></md-ripple--></div>
   <h1>thinking sns</h1>
     <div class="center">
 
@@ -38,14 +38,14 @@
             <div class="input-group">
                 <input type="text" id="createId" placeholder="IDを入力" class="text-box">
                 <input type="number" id="participantCount" min="2" max="5" placeholder="2~5人" class="text-box">
-                <button onclick="createSession()"><md-ripple></md-ripple>開始</button>
+                <button onclick="createSession()"><!--md-ripple></md-ripple-->開始</button>
             </div>
             <p class="error" id="createError">このIDは既に使用されています</p></div>
 <div id="firstbox">
             <h2>トークルームに参加</h2>
             <div class="input-group">
                 <input type="text" id="joinId" placeholder="IDを入力" class="text-box">
-                <button onclick="joinSession()">参加<md-ripple></md-ripple></button>
+                <button onclick="joinSession()">参加<!--md-ripple></md-ripple--></button>
             </div>
             <p class="error" id="joinError">セッションが見つかりません</p>
         </div></div></div>
