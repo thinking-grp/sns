@@ -1,93 +1,34 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <link rel="stylesheet" href="style.css">
-  <link rel="icon" href="https://thinking-grp.github.io/image/logo/ogp-logo.png">
-  <script type="importmap">
-    {
-      "imports": {
-        "@material/web/": "https://esm.run/@material/web/"
-      }
-    }
-  </script>
-  <script type="module">
-    import '@material/web/all.js';
-    import {styles as typescaleStyles} from '@material/web/typography/md-typescale-styles.js';
-
-    document.adoptedStyleSheets.push(typescaleStyles.styleSheet);
-  </script>
-
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>thinking SNS</title>
-  
+  <link rel="icon" href="https://thinking-grp.github.io/image/logo/ogp-logo.png">
+  <script src="https://cdn.jsdelivr.net/npm/dayjs@1/dayjs.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  <script src="https://cdn.jsdelivr.net/npm/antd@6.5.0/dist/antd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@babel/standalone/babel.min.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.9.3/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.9.3/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.9.3/firebase-auth-compat.js"></script>
+  <style>
+    @font-face {
+      font-family: "HarmonyOS Sans SC";
+      src: url("HarmonyOS_Sans_SC_Regular.woff2") format("woff2");
+      font-weight: normal;
+      font-style: normal
+    }
+    body {
+      font-family: "HarmonyOS Sans SC", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      margin: 0;
+      padding: 0
+    }
+  </style>
 </head>
 <body>
-  <div class="snstype"><button class="snstypebtn snstypeselect">スレッド</button><button class="snstypebtn" onclick="location.href='https://thinking-grp.github.io/sns/text'">テキスト通話</button></div>
-  <h1>thinking sns</h1>
-  <div class="center">
-    <!-- ログインセクション -->
-
-  <button id="openDialogButton" onclick="document.getElementById('myDialog').showModal()">ご利用時の注意事項</button><button class="nobgbtn" onclick="location.href='https://thinking-grp.github.io/'">thinking 公式</button></div>
-  <button id="fab" onclick="document.getElementById('post-dialog').showModal()">+</button>
-
-  <dialog id="post-dialog">
-    <form method="dialog" id="post-form">
-      <div class="dialog-header">新規投稿</div>
-      <textarea id="text" placeholder="テキストを入力" rows="5"></textarea>
-      <div class="dialog-mode">
-        <label><input type="radio" name="texttype" value="default" checked> 通常テキスト</label>
-        <label><input type="radio" name="texttype" value="mini"> ミニ投稿</label>
-        <label><input type="radio" name="texttype" value="delay"> ディレイド投稿</label>
-      </div>
-      <div class="dialog-colors">
-        <label for="bg">背景: <input type="color" id="bg" value="#ffffff"></label>
-        <label for="color">文字: <input type="color" id="color" value="#000000"></label>
-      </div>
-      <div class="dialog-actions">
-        <button type="button" onclick="document.getElementById('post-dialog').close()">キャンセル</button>
-        <button type="button" id="submitButton" onclick="document.getElementById('submitButton').click()">投稿</button>
-      </div>
-    </form>
-  </dialog>
-<div id="login-section">
-  <div class="flex">
-  <div class="error">ログインしていません</div>
-  <button id="google-login-btn">Googleでログイン</button>
-</div>
-</div>
-
-<div id="user-info-section" style="display: none;">
-  <span id="user-info"></span>
-  <button id="logout-btn">ログアウト</button>
-</div>
-  
-  
-<div id="miniPost">
-</div>
-<ul id="postList">
-</ul>
-  <dialog id="myDialog">
-    <div class="dialog-header">ご利用時の注意事項</div>
-    <div class="dialog-content">
-      投稿削除について<br>投稿は容量管理のため、予告なく削除されることがあります。予めご了承ください。<br><br>個人情報の保護<br>個人情報（氏名、住所、連絡先など）は、絶対に投稿しないでください。<br><br>投稿頻度について<br>サービスの維持に影響を及ぼす可能性があるため、高すぎる頻度での読み込み・リアクションはご遠慮ください。<br><br>運営について<br>私たちは利益がないグループで運営しています。そのため、様々な制限の都合により予告なくサービスを一時停止する場合があります。<br><br>バグや不具合の報告<br>バグや不具合を発見した場合は、投稿を通じてお知らせいただけると助かります。
-    </div>
-    <div class="dialog-actions">
-      <button onclick="document.getElementById('myDialog').close()">完了</button>
-    </div>
-  </dialog>
-  <dialog id="dialog2">
-    <div class="dialog-header">おっと!</div>
-    <div class="dialog-content">
-      何かしらの問題が発生したようです。詳しくはコンソールをご確認ください。
-    </div>
-    <div class="dialog-actions">
-      <button onclick="document.getElementById('dialog2').close()">閉じる</button>
-    </div>
-  </dialog>
-  <button id="loadMoreButton" style="display: none;">もっと読み込む</button>
-  <div class="bottommargin"></div>
-  <script type="module" src="script.js"></script>
-
+  <div id="root"></div>
+  <script type="text/babel" src="app.jsx"></script>
 </body>
 </html>
