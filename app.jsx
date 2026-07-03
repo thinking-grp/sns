@@ -1,5 +1,5 @@
 const { useState, useEffect, useRef, useCallback } = React;
-const { Button, Modal, Input, Radio, Alert, Space, ConfigProvider, message } = antd;
+const { Button, Modal, Input, Radio, Alert, Space, ConfigProvider, message, ColorPicker } = antd;
 
 const firebaseConfig = { apiKey: "AIzaSyCCw9vbQuF9CJzyvhfy__UDIGq9SQO0KA8", authDomain: "thinking-sns.firebaseapp.com", projectId: "thinking-sns", storageBucket: "thinking-sns.firebasestorage.app", messagingSenderId: "133464509665", appId: "1:133464509665:web:c0b8769832c1d56ef9bba0", measurementId: "G-WZCMJ4R2TF" };
 firebase.initializeApp(firebaseConfig);
@@ -8,6 +8,22 @@ const auth = firebase.auth();
 const googleProvider = new firebase.auth.GoogleAuthProvider();
 const REACTIONS = ['❤️', '👏', '🤔', '🤝', '✅'];
 const POST_DOC_REF = db.collection('post-1').doc('wsbxPa2kQDaexLV9hiVC');
+
+function formatDate(timestamp) {
+  if (!timestamp) return '';
+  const date = timestamp.toDate ? timestamp.toDate() : new Date(timestamp);
+  const y = date.getFullYear();
+  const mo = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  const h = String(date.getHours()).padStart(2, '0');
+  const mi = String(date.getMinutes()).padStart(2, '0');
+  const s = String(date.getSeconds()).padStart(2, '0');
+  const offset = -date.getTimezoneOffset();
+  const sign = offset >= 0 ? '+' : '-';
+  const oh = String(Math.floor(Math.abs(offset) / 60)).padStart(2, '0');
+  const om = String(Math.abs(offset) % 60).padStart(2, '0');
+  return `${y}年${mo}月${d}日 ${h}:${mi}:${s} UTC${sign}${oh}:${om}`;
+}
 
 function PostBox({ data, postId, onRefresh }) {
   const [showReplies, setShowReplies] = useState(false);
@@ -52,7 +68,7 @@ function PostBox({ data, postId, onRefresh }) {
     if (snap.exists) {
       const repliesData = snap.data().replies || {};
       const replyId = Math.random().toString(36).substring(2, 15);
-      repliesData[replyId] = { text: replyText, createdAt: new Date().toISOString() };
+      repliesData[replyId] = { text: replyText, createdAt: firebase.firestore.FieldValue.serverTimestamp() };
       await docRef.update({ replies: repliesData });
       setReplyText('');
       onRefresh();
@@ -74,6 +90,7 @@ function PostBox({ data, postId, onRefresh }) {
   return (
     <div style={{ padding: 16, marginBottom: 12, background: data.bg || '#fff', color: data.color || '#000', borderRadius: 12, boxShadow: '0 1px 2px rgba(0,0,0,0.06)' }}>
       <div style={{ fontSize: 15, lineHeight: 1.6 }}>{displayedText}</div>
+      <div style={{ fontSize: 12, color: data.color || '#000', opacity: 0.5, marginTop: 4 }}>{formatDate(data.createdAt)}</div>
       <div style={{ marginTop: 8, display: 'flex', flexWrap: 'wrap', gap: 4 }}>
         {REACTIONS.map(r => (
           <button key={r} onClick={() => handleReaction(r)} style={{ padding: '4px 10px', border: '1px solid rgba(0,0,0,0.08)', borderRadius: 999, background: (data.color || '#000') + 'dd', color: data.bg || '#fff', cursor: 'pointer', fontSize: 13 }}>
@@ -86,7 +103,7 @@ function PostBox({ data, postId, onRefresh }) {
           {replies.map(r => (
             <div key={r.id} style={{ padding: '10px 14px', marginBottom: 6, background: 'rgba(0,0,0,0.04)', borderRadius: 10 }}>
               <div style={{ fontSize: 14 }}>{r.text}</div>
-              <div style={{ fontSize: 12, color: 'rgba(0,0,0,0.25)', marginTop: 4 }}>{new Date(r.createdAt).toLocaleString()}</div>
+              <div style={{ fontSize: 12, color: 'rgba(0,0,0,0.25)', marginTop: 4 }}>{formatDate(r.createdAt)}</div>
             </div>
           ))}
           <div style={{ marginTop: 8, display: 'flex', gap: 8 }}>
@@ -233,26 +250,16 @@ function App() {
   return (
     <ConfigProvider theme={{ token: { colorPrimary: '#000', borderRadius: 8, fontFamily: '"HarmonyOS Sans SC", -apple-system, BlinkMacSystemFont, sans-serif' } }}>
       <div style={{ padding: 24, minHeight: '100vh', background: '#f5f5f5' }}>
-        <div style={{ display: 'inline-flex', padding: 4, background: '#fff', borderRadius: 999, boxShadow: '0 1px 2px rgba(0,0,0,0.06)', marginBottom: 32 }}>
-          <Button type="primary" shape="round" style={{ margin: 3 }}>スレッド</Button>
-          <Button shape="round" style={{ margin: 3 }} href="https://thinking-grp.github.io/sns/text">テキスト通話</Button>
-        </div>
-        <h1 style={{ fontSize: 26, fontWeight: 600, lineHeight: '36px', marginBottom: 32 }}>thinking sns</h1>
+        <h1 style={{ fontSize: 26, fontWeight: 600, lineHeight: '36px', marginBottom: 32 }}>thinkSocial</h1>
         <Space style={{ marginBottom: 32 }}>
           <Button onClick={() => setGuideOpen(true)}>ご利用時の注意事項</Button>
           <Button href="https://thinking-grp.github.io/">thinking 公式</Button>
         </Space>
 
         {!user ? (
-          <div style={{ marginBottom: 16 }}>
-            <Alert message="ログインしていません" type="error" showIcon style={{ borderRadius: 8, marginBottom: 8 }} />
-            <Space wrap>
-              <Button type="primary" onClick={signInWithGoogle}>Googleでログイン</Button>
-              <Input placeholder="メールアドレス" value={email} onChange={e => setEmail(e.target.value)} style={{ width: 200, borderRadius: 8 }} />
-              <Input.Password placeholder="パスワード" value={password} onChange={e => setPassword(e.target.value)} style={{ width: 160, borderRadius: 8 }} />
-              <Button onClick={signInWithEmail}>ログイン</Button>
-              <Button onClick={registerWithEmail}>新規登録</Button>
-            </Space>
+          <div style={{ marginBottom: 16, padding: 20, background: '#fff', borderRadius: 12, boxShadow: '0 1px 2px rgba(0,0,0,0.06)' }}>
+            <div style={{ marginBottom: 12, fontSize: 15, color: 'rgba(0,0,0,0.65)' }}>ログインすると投稿やリアクションができます</div>
+            <Button onClick={signInWithGoogle}>Googleでログイン</Button>
           </div>
         ) : (
           <div style={{ marginBottom: 16 }}>
@@ -271,9 +278,9 @@ function App() {
           もっと読み込む
         </Button>
 
-        <Button type="primary" shape="round" size="large" onClick={() => setPostOpen(true)} style={{ position: 'fixed', bottom: 32, right: 32, zIndex: 1000, height: 48, paddingInline: 24 }}>
-          新規投稿
-        </Button>
+        <button onClick={() => setPostOpen(true)} style={{ position: 'fixed', bottom: 32, right: 32, zIndex: 1000, height: 48, borderRadius: 12, border: '1px solid rgba(0,0,0,0.08)', background: '#fff', boxShadow: '0 4px 12px rgba(0,0,0,0.08)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, padding: '0 20px', fontSize: 15, fontWeight: 500, color: 'rgba(0,0,0,0.85)' }}>
+          <span style={{ fontSize: 20 }}>+</span> 新規投稿
+        </button>
 
         <Modal title="新規投稿" open={postOpen} onCancel={() => setPostOpen(false)} onOk={submitPost} okText="投稿" cancelText="キャンセル">
           <Input.TextArea value={text} onChange={e => setText(e.target.value)} placeholder="テキストを入力" rows={5} style={{ marginBottom: 12 }} />
@@ -283,8 +290,8 @@ function App() {
             <Radio.Button value="delay">ディレイド投稿</Radio.Button>
           </Radio.Group>
           <Space>
-            <span>背景: <input type="color" value={bg} onChange={e => setBg(e.target.value)} style={{ width: 32, height: 32, border: '1px solid #d9d9d9', borderRadius: 6, cursor: 'pointer', padding: 2 }} /></span>
-            <span>文字: <input type="color" value={color} onChange={e => setColor(e.target.value)} style={{ width: 32, height: 32, border: '1px solid #d9d9d9', borderRadius: 6, cursor: 'pointer', padding: 2 }} /></span>
+            <span>背景: <ColorPicker value={bg} onChange={(v, hex) => setBg(hex)} size="small" /></span>
+            <span>文字: <ColorPicker value={color} onChange={(v, hex) => setColor(hex)} size="small" /></span>
           </Space>
         </Modal>
 
