@@ -25,12 +25,106 @@ function formatDate(timestamp) {
   return `${y}年${mo}月${d}日 ${h}:${mi}:${s} UTC${sign}${oh}:${om}`;
 }
 
-function PostBox({ data, postId, onRefresh }) {
-  const [showReplies, setShowReplies] = useState(false);
+function PostDetail({ postId, data, open, onClose, onRefresh }) {
   const [replyText, setReplyText] = useState('');
   const [replies, setReplies] = useState([]);
+  const [clickedReactions, setClickedReactions] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('reactions_' + postId) || '[]'); } catch { return []; }
+  });
+
+  const loadReplies = async () => {
+    const snap = await POST_DOC_REF.collection('maintext').doc(postId).get();
+    if (snap.exists) {
+      const repliesData = snap.data().replies || {};
+      setReplies(Object.entries(repliesData).map(([id, r]) => ({ id, ...r })));
+    }
+  };
+
+  useEffect(() => { if (open) loadReplies(); }, [open]);
+
+  const handleReaction = async (reaction) => {
+    const docRef = POST_DOC_REF.collection('maintext').doc(postId);
+    const snap = await docRef.get();
+    if (snap.exists) {
+      const reactions = snap.data().reactions || {};
+      const isClicked = clickedReactions.includes(reaction);
+      if (isClicked) {
+        reactions[reaction] = Math.max(0, (reactions[reaction] || 1) - 1);
+        const next = clickedReactions.filter(r => r !== reaction);
+        setClickedReactions(next);
+        localStorage.setItem('reactions_' + postId, JSON.stringify(next));
+      } else {
+        reactions[reaction] = (reactions[reaction] || 0) + 1;
+        const next = [...clickedReactions, reaction];
+        setClickedReactions(next);
+        localStorage.setItem('reactions_' + postId, JSON.stringify(next));
+      }
+      await docRef.update({ reactions });
+      onRefresh();
+    }
+  };
+
+  const handleReplySubmit = async () => {
+    if (!replyText.trim()) return;
+    const docRef = POST_DOC_REF.collection('maintext').doc(postId);
+    const snap = await docRef.get();
+    if (snap.exists) {
+      const repliesData = snap.data().replies || {};
+      const replyId = Math.random().toString(36).substring(2, 15);
+      repliesData[replyId] = { text: replyText, createdAt: firebase.firestore.FieldValue.serverTimestamp() };
+      await docRef.update({ replies: repliesData });
+      setReplyText('');
+      loadReplies();
+      onRefresh();
+    }
+  };
+
+  return (
+    <Modal open={open} onCancel={onClose} footer={null} width="90vw" styles={{ body: { height: 'calc(100vh - 120px)', display: 'flex', flexDirection: 'column', padding: 0, background: '#fff' }, content: { borderRadius: 16 } }}>
+      <div style={{ display: 'flex', alignItems: 'center', padding: '16px 20px', borderBottom: '1px solid rgba(0,0,0,0.06)' }}>
+        <Button type="text" onClick={onClose} style={{ marginRight: 12, fontSize: 18 }}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg>
+        </Button>
+        <span style={{ fontSize: 16, fontWeight: 600 }}>投稿</span>
+      </div>
+      <div style={{ flex: 1, overflow: 'auto', padding: '16px 20px', paddingBottom: 80 }}>
+        <div style={{ padding: 16, background: data.bg || '#fff', color: data.color || '#000', borderRadius: 24, marginBottom: 16 }}>
+          {data.username && <div style={{ fontSize: 14, fontWeight: 600, marginBottom: 6 }}>{data.username}</div>}
+          <div style={{ fontSize: 16, lineHeight: 1.6 }}>{data.delay ? (data.text || 'テキストなし') : (data.text || 'テキストなし')}</div>
+          <div style={{ fontSize: 12, color: data.color || '#000', opacity: 0.5, marginTop: 8 }}>{formatDate(data.createdAt)}</div>
+          <div style={{ marginTop: 8, display: 'flex', flexWrap: 'wrap', gap: 4 }}>
+            {REACTIONS.map(r => {
+              const isClicked = clickedReactions.includes(r);
+              return (
+                <button key={r} onClick={() => handleReaction(r)} style={{ padding: '4px 10px', border: isClicked ? 'none' : '1px solid ' + (data.bg || '#fff'), borderRadius: 999, background: isClicked ? (data.color || '#000') + 'dd' : 'transparent', color: isClicked ? (data.bg || '#fff') : (data.color || '#000'), cursor: 'pointer', fontSize: 13 }}>
+                  {r} {(data.reactions?.[r] || 0)}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+        {replies.length > 0 ? replies.map(r => (
+          <div key={r.id} style={{ padding: 14, marginBottom: 8, background: '#fafafa', borderRadius: 14 }}>
+            <div style={{ fontSize: 15, lineHeight: 1.5 }}>{r.text}</div>
+            <div style={{ fontSize: 12, color: 'rgba(0,0,0,0.25)', marginTop: 6 }}>{formatDate(r.createdAt)}</div>
+          </div>
+        )) : <div style={{ textAlign: 'center', color: 'rgba(0,0,0,0.25)', padding: 40 }}>まだ返信がありません</div>}
+      </div>
+      <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, padding: 12, background: '#fff', borderTop: '1px solid rgba(0,0,0,0.06)', display: 'flex', gap: 8 }}>
+        <Input value={replyText} onChange={e => setReplyText(e.target.value)} placeholder="返信を入力..." style={{ borderRadius: 24 }} onPressEnter={handleReplySubmit} />
+        <Button onClick={handleReplySubmit}>送信</Button>
+      </div>
+    </Modal>
+  );
+}
+
+function PostBox({ data, postId, onRefresh, onOpen }) {
   const [displayedText, setDisplayedText] = useState(data.delay ? '▮' : (data.text || 'テキストなし'));
+  const [expanded, setExpanded] = useState(false);
   const timerRef = useRef(null);
+  const [clickedReactions, setClickedReactions] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('reactions_' + postId) || '[]'); } catch { return []; }
+  });
 
   useEffect(() => {
     if (data.delay && data.createdAt) {
@@ -50,78 +144,55 @@ function PostBox({ data, postId, onRefresh }) {
     }
   }, [data]);
 
-  const handleReaction = async (reaction) => {
+  const handleReaction = async (e, reaction) => {
+    e.stopPropagation();
     const docRef = POST_DOC_REF.collection('maintext').doc(postId);
     const snap = await docRef.get();
     if (snap.exists) {
       const reactions = snap.data().reactions || {};
-      reactions[reaction] = (reactions[reaction] || 0) + 1;
+      const isClicked = clickedReactions.includes(reaction);
+      if (isClicked) {
+        reactions[reaction] = Math.max(0, (reactions[reaction] || 1) - 1);
+        const next = clickedReactions.filter(r => r !== reaction);
+        setClickedReactions(next);
+        localStorage.setItem('reactions_' + postId, JSON.stringify(next));
+      } else {
+        reactions[reaction] = (reactions[reaction] || 0) + 1;
+        const next = [...clickedReactions, reaction];
+        setClickedReactions(next);
+        localStorage.setItem('reactions_' + postId, JSON.stringify(next));
+      }
       await docRef.update({ reactions });
       onRefresh();
     }
   };
 
-  const handleReplySubmit = async () => {
-    if (!replyText.trim()) return;
-    const docRef = POST_DOC_REF.collection('maintext').doc(postId);
-    const snap = await docRef.get();
-    if (snap.exists) {
-      const repliesData = snap.data().replies || {};
-      const replyId = Math.random().toString(36).substring(2, 15);
-      repliesData[replyId] = { text: replyText, createdAt: firebase.firestore.FieldValue.serverTimestamp() };
-      await docRef.update({ replies: repliesData });
-      setReplyText('');
-      onRefresh();
-    }
-  };
-
-  const toggleReplies = async () => {
-    if (!showReplies) {
-      const snap = await POST_DOC_REF.collection('maintext').doc(postId).get();
-      if (snap.exists) {
-        const data = snap.data();
-        const repliesData = data.replies || {};
-        setReplies(Object.entries(repliesData).map(([id, r]) => ({ id, ...r })));
-      }
-    }
-    setShowReplies(!showReplies);
-  };
+  const lines = displayedText.split('\n').length;
+  const isLong = lines >= 8 && !expanded;
 
   return (
-    <div style={{ padding: 16, marginBottom: 12, background: data.bg || '#fff', color: data.color || '#000', borderRadius: 12, boxShadow: '0 1px 2px rgba(0,0,0,0.06)' }}>
-      <div style={{ fontSize: 15, lineHeight: 1.6 }}>{displayedText}</div>
+    <div onClick={() => onOpen(postId, data)} style={{ padding: 16, marginBottom: 12, background: data.bg || '#fff', color: data.color || '#000', borderRadius: 24, boxShadow: '0 1px 2px rgba(0,0,0,0.06)', cursor: 'pointer' }}>
+      {data.username && <div style={{ fontSize: 13, fontWeight: 600, marginBottom: 4 }}>{data.username}</div>}
+      <div style={{ fontSize: 15, lineHeight: 1.6, whiteSpace: 'pre-wrap', overflow: 'hidden', maxHeight: isLong ? 'calc(1.6em * 8)' : 'none' }}>{displayedText}</div>
+      {isLong && <div style={{ fontSize: 13, color: data.color || '#000', opacity: 0.5, marginTop: 4 }} onClick={e => { e.stopPropagation(); setExpanded(true); }}>...続きを見る</div>}
       <div style={{ fontSize: 12, color: data.color || '#000', opacity: 0.5, marginTop: 4 }}>{formatDate(data.createdAt)}</div>
-      <div style={{ marginTop: 8, display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-        {REACTIONS.map(r => (
-          <button key={r} onClick={() => handleReaction(r)} style={{ padding: '4px 10px', border: '1px solid rgba(0,0,0,0.08)', borderRadius: 999, background: (data.color || '#000') + 'dd', color: data.bg || '#fff', cursor: 'pointer', fontSize: 13 }}>
-            {r} {data.reactions?.[r] || 0}
-          </button>
-        ))}
+      <div style={{ marginTop: 8, display: 'flex', flexWrap: 'wrap', gap: 4 }} onClick={e => e.stopPropagation()}>
+        {REACTIONS.map(r => {
+          const isClicked = clickedReactions.includes(r);
+          return (
+            <button key={r} onClick={(e) => handleReaction(e, r)} style={{ padding: '4px 10px', border: isClicked ? 'none' : '1px solid ' + (data.bg || '#fff'), borderRadius: 999, background: isClicked ? (data.color || '#000') + 'dd' : 'transparent', color: isClicked ? (data.bg || '#fff') : (data.color || '#000'), cursor: 'pointer', fontSize: 13 }}>
+              {r} {(data.reactions?.[r] || 0)}
+            </button>
+          );
+        })}
       </div>
-      {showReplies && (
-        <div style={{ marginTop: 8 }}>
-          {replies.map(r => (
-            <div key={r.id} style={{ padding: '10px 14px', marginBottom: 6, background: 'rgba(0,0,0,0.04)', borderRadius: 10 }}>
-              <div style={{ fontSize: 14 }}>{r.text}</div>
-              <div style={{ fontSize: 12, color: 'rgba(0,0,0,0.25)', marginTop: 4 }}>{formatDate(r.createdAt)}</div>
-            </div>
-          ))}
-          <div style={{ marginTop: 8, display: 'flex', gap: 8 }}>
-            <Input value={replyText} onChange={e => setReplyText(e.target.value)} placeholder="返信を入力" style={{ borderRadius: 8 }} onPressEnter={handleReplySubmit} />
-            <Button onClick={handleReplySubmit}>返信</Button>
-          </div>
-        </div>
-      )}
-      <Button type="text" size="small" onClick={toggleReplies} style={{ marginTop: 8, color: data.color || '#000' }}>
-        {showReplies ? '返信を隠す' : '返信を表示'}
-      </Button>
     </div>
   );
 }
 
 function MiniPostBox({ data }) {
   return (
-    <div style={{ display: 'inline-block', padding: 16, marginRight: 12, background: data.bg || '#fff', color: data.color || '#000', borderRadius: 12, boxShadow: '0 1px 2px rgba(0,0,0,0.06)', fontSize: 24, fontWeight: 500 }}>
+    <div style={{ display: 'inline-block', padding: 16, marginRight: 12, background: data.bg || '#fff', color: data.color || '#000', borderRadius: 24, boxShadow: '0 1px 2px rgba(0,0,0,0.06)', fontSize: 24, fontWeight: 500 }}>
       {data.text}
     </div>
   );
@@ -134,9 +205,13 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [postOpen, setPostOpen] = useState(false);
   const [guideOpen, setGuideOpen] = useState(false);
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [detailPost, setDetailPost] = useState(null);
+  const [detailId, setDetailId] = useState(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogTitle, setDialogTitle] = useState('');
   const [dialogContent, setDialogContent] = useState('');
+  const [username, setUsername] = useState('');
   const [text, setText] = useState('');
   const [textType, setTextType] = useState('default');
   const [bg, setBg] = useState('#ffffff');
@@ -154,7 +229,19 @@ function App() {
   };
 
   useEffect(() => {
-    const unsub = auth.onAuthStateChanged(u => setUser(u));
+    const unsub = auth.onAuthStateChanged(async u => {
+      setUser(u);
+      if (u) {
+        const snap = await db.collection('users').doc(u.uid).get();
+        if (snap.exists && snap.data().username) {
+          setUsername(snap.data().username);
+        } else {
+          setUsername(u.displayName || u.email || '匿名');
+        }
+      } else {
+        setUsername('');
+      }
+    });
     return unsub;
   }, []);
 
@@ -225,12 +312,13 @@ function App() {
   };
 
   const submitPost = async () => {
-    if (!text) { showDialog('すっからかん!', 'テキストを入力してください'); return; }
+    if (!text) { showDialog('すっからかん!', 'テキストを入力しましょう'); return; }
     if (textType === 'mini' && text.length !== 3) { showDialog('3文字で!', 'ミニ投稿では3文字しか投稿できません。'); return; }
     try {
       const colName = textType === 'mini' ? 'minitext' : 'maintext';
       await POST_DOC_REF.collection(colName).doc().set({
         text, bg, color,
+        username: username || '匿名',
         createdAt: firebase.firestore.FieldValue.serverTimestamp(),
         reactions: {}, replies: {},
         delay: textType === 'delay'
@@ -248,7 +336,7 @@ function App() {
   };
 
   return (
-    <ConfigProvider theme={{ token: { colorPrimary: '#000', borderRadius: 8, fontFamily: '"HarmonyOS Sans SC", -apple-system, BlinkMacSystemFont, sans-serif' } }}>
+    <ConfigProvider theme={{ token: { colorPrimary: '#000', borderRadius: 10, fontFamily: '"HarmonyOS Sans SC", -apple-system, BlinkMacSystemFont, sans-serif', padding: 18, paddingSM: 24, paddingLG: 24 } }}>
       <div style={{ padding: 24, minHeight: '100vh', background: '#f5f5f5' }}>
         <h1 style={{ fontSize: 26, fontWeight: 600, lineHeight: '36px', marginBottom: 32 }}>thinkSocial</h1>
         <Space style={{ marginBottom: 32 }}>
@@ -257,14 +345,14 @@ function App() {
         </Space>
 
         {!user ? (
-          <div style={{ marginBottom: 16, padding: 20, background: '#fff', borderRadius: 12, boxShadow: '0 1px 2px rgba(0,0,0,0.06)' }}>
+          <div style={{ marginBottom: 16, padding: 20, background: '#fff', borderRadius: 24, boxShadow: '0 1px 2px rgba(0,0,0,0.06)' }}>
             <div style={{ marginBottom: 12, fontSize: 15, color: 'rgba(0,0,0,0.65)' }}>ログインすると投稿やリアクションができます</div>
             <Button onClick={signInWithGoogle}>Googleでログイン</Button>
           </div>
         ) : (
           <div style={{ marginBottom: 16 }}>
             <Space>
-              <span>ようこそ、{user.displayName || user.email}さん</span>
+              <span>ようこそ、{username}さん</span>
               <Button onClick={() => auth.signOut()}>ログアウト</Button>
             </Space>
           </div>
@@ -273,12 +361,12 @@ function App() {
         <div style={{ overflowX: 'auto', whiteSpace: 'nowrap', marginBottom: 16, paddingBottom: 8 }}>
           {miniPosts.map(p => <MiniPostBox key={p.id} data={p} />)}
         </div>
-        {posts.map(p => <PostBox key={p.id} postId={p.id} data={p} onRefresh={handleRefresh} />)}
+        {posts.map(p => <PostBox key={p.id} postId={p.id} data={p} onRefresh={handleRefresh} onOpen={(id, data) => { setDetailId(id); setDetailPost(data); setDetailOpen(true); }} />)}
         <Button block style={{ marginTop: 16 }} onClick={() => loadPosts(true)} loading={loading}>
           もっと読み込む
         </Button>
 
-        <button onClick={() => setPostOpen(true)} style={{ position: 'fixed', bottom: 32, right: 32, zIndex: 1000, height: 48, borderRadius: 12, border: '1px solid rgba(0,0,0,0.08)', background: '#fff', boxShadow: '0 4px 12px rgba(0,0,0,0.08)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, padding: '0 20px', fontSize: 15, fontWeight: 500, color: 'rgba(0,0,0,0.85)' }}>
+        <button onClick={() => setPostOpen(true)} style={{ position: 'fixed', bottom: 32, right: 32, zIndex: 1000, height: 48, borderRadius: 24, border: '1px solid rgba(0,0,0,0.08)', background: '#fff', boxShadow: '0 4px 12px rgba(0,0,0,0.08)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, padding: '0 20px', fontSize: 15, fontWeight: 500, color: 'rgba(0,0,0,0.85)' }}>
           <span style={{ fontSize: 20 }}>+</span> 新規投稿
         </button>
 
@@ -309,6 +397,8 @@ function App() {
 
         <div style={{ height: 80 }}></div>
       </div>
+
+      {detailPost && <PostDetail postId={detailId} data={detailPost} open={detailOpen} onClose={() => setDetailOpen(false)} onRefresh={handleRefresh} />}
     </ConfigProvider>
   );
 }
