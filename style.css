@@ -1,7 +1,15 @@
+@font-face {
+    font-family: "HarmonyOS Sans SC";
+    src: url("HarmonyOS_Sans_SC_Regular.woff2") format("woff2");
+    font-weight: normal;
+    font-style: normal
+}
+
 * {
     margin: 0;
     padding: 0;
-    box-sizing: border-box
+    box-sizing: border-box;
+    font-family: "HarmonyOS Sans SC", sans-serif
 }
 
 .flex {
@@ -25,7 +33,6 @@ button {
 }
 
 .snstype {
-    margin: 0 auto;
     width: fit-content;
     padding: 8px
 }
@@ -57,9 +64,7 @@ button {
 }
 
 .colorbox {
-    width: 60px;
-    height: 40px;
-    position: relative
+    display: none
 }
 
 label {
@@ -68,23 +73,14 @@ label {
 }
 
 .head {
-    display: flex;
-    padding: 8px;
-    gap: 8px;
-    width: fit-content;
-    position: fixed;
-    bottom: 16px;
-    left: 50%;
-    transform: translateX(-50%);
-    height: 40px;
-    z-index: 1
+    display: none
 }
 
 #text {
-    width: 200px;
+    width: 100%;
     border: none;
-    height: 40px;
-    padding-left: 8px
+    padding: 8px;
+    resize: vertical
 }
 
 #submitButton {
@@ -120,7 +116,6 @@ label {
 }
 
 h1 {
-    text-align: center;
     font-size: 40px
 }
 
@@ -129,7 +124,6 @@ h1 {
 }
 
 #loadMoreButton {
-    margin: 0 auto;
     display: block
 }
 
@@ -145,7 +139,6 @@ h1 {
 
 .center {
     display: flex;
-    margin: 0 auto;
     width: fit-content
 }
 
@@ -165,46 +158,82 @@ h1 {
 }
 
 .menu-container {
+    display: none
+}
+
+#fab {
     position: fixed;
-    top: calc(100vh - 20px);
-    right: calc(50vw + 260px);
+    bottom: 24px;
+    right: 24px;
+    width: 56px;
+    height: 56px;
+    border: none;
+    font-size: 24px;
+    z-index: 100
+}
+
+#post-dialog {
+    border: none;
+    padding: 24px;
+    width: 90%;
+    max-width: 480px;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%)
+}
+
+#post-dialog::backdrop {
+    background: rgba(0, 0, 0, 0.3)
+}
+
+.dialog-header {
+    font-size: 20px;
+    margin-bottom: 16px
+}
+
+.dialog-mode {
+    display: flex;
+    gap: 12px;
+    margin: 12px 0
+}
+
+.dialog-mode label {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    width: auto;
+    height: auto
+}
+
+.dialog-colors {
+    display: flex;
+    gap: 16px;
+    margin: 12px 0
+}
+
+.dialog-colors label {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    width: auto;
+    height: auto
+}
+
+.dialog-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 16px
+}
+
+.dialog-actions button {
+    padding: 8px 16px;
     margin: 0
 }
 
 .post-meta {
     font-size: 10px
-}
-
-.menu.show {
-    opacity: 1
-}
-
-#menu1.show {
-    transform: translateY(-150px)
-}
-
-#menu2.show {
-    transform: translateY(-100px)
-}
-
-#menu3.show {
-    transform: translateY(-50px)
-}
-
-.menu {
-    position: absolute;
-    bottom: 0;
-    transform: translateY(100%);
-    opacity: 0;
-    border: 1px solid;
-    padding: 10px;
-    margin-bottom: 10px;
-    text-align: left;
-    width: fit-content
-}
-
-.displaynone {
-    display: none
 }
 
 
@@ -220,12 +249,10 @@ h1 {
 .error {
     padding: 8px 16px;
     width: fit-content;
-    text-align: center;
-    margin: 0 auto !important
+    text-align: center
 }
 
 #login-section {
-    margin: 8px auto !important;
     width: fit-content;
     display: flex;
     gap: 8px;
@@ -238,7 +265,6 @@ h1 {
 }
 
 #user-info-section {
-    margin: 8px auto !important;
     width: fit-content;
     display: flex;
     gap: 8px;

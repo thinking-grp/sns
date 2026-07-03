@@ -16,9 +16,7 @@
 
     document.adoptedStyleSheets.push(typescaleStyles.styleSheet);
   </script>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@100..900&display=swap" rel="stylesheet">
+
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>thinking SNS</title>
@@ -31,29 +29,27 @@
     <!-- ログインセクション -->
 
   <button id="openDialogButton">ご利用時の注意事項</button><button class="nobgbtn" onclick="location.href='https://thinking-grp.github.io/'">thinking 公式</button></div>
-  <nobr>
-    <div class="menu-container">
-    <label for="default"><div id="menu1" class="menu"><input type="radio" name="texttype" value="default" id="default" checked class="displaynone"/>通常テキスト<!--md-ripple></md-ripple--></div></label>
-    <label for="mini"><div id="menu2" class="menu"><input type="radio" name="texttype" value="mini" id="mini" class="displaynone"/>ミニ投稿<!--md-ripple></md-ripple--></div></label>
-    <label for="delay"><div id="menu3" class="menu"><input type="radio" name="texttype" value="delay" id="delay" class="displaynone"/>ディレイド投稿<!--md-ripple></md-ripple--></div></nobr></div></label>
-  </div>
-  <div class="head">
-    <button onclick="toggletexttypeMenu()">投稿タイプ<!--md-ripple></md-ripple--></button>
-      <script>
-    function toggletexttypeMenu() {
-      const menus = document.querySelectorAll('.menu');
-      menus.forEach(menu => {
-        menu.classList.toggle('show');
-      });
-    }
-  </script>
-  <input type="text" id="text" placeholder="テキストを入力">
-  <label for="bg"><div class="bg-color-box colorbox" id="bgBox"><!--md-ripple></md-ripple--></div></label>
-  <input class="hide" type="color" id="bg" value="#ffffff">
-  <label for="color"><div class="text-color-box colorbox" id="textBox"><!--md-ripple></md-ripple--></div></label>
-  <input class="hide" type="color" id="color" value="#000000">
-    <button id="submitButton">投稿</button>
-    </div>
+  <button id="fab" onclick="document.getElementById('post-dialog').showModal()">+</button>
+
+  <dialog id="post-dialog">
+    <form method="dialog" id="post-form">
+      <div class="dialog-header">新規投稿</div>
+      <textarea id="text" placeholder="テキストを入力" rows="5"></textarea>
+      <div class="dialog-mode">
+        <label><input type="radio" name="texttype" value="default" checked> 通常テキスト</label>
+        <label><input type="radio" name="texttype" value="mini"> ミニ投稿</label>
+        <label><input type="radio" name="texttype" value="delay"> ディレイド投稿</label>
+      </div>
+      <div class="dialog-colors">
+        <label for="bg">背景: <input type="color" id="bg" value="#ffffff"></label>
+        <label for="color">文字: <input type="color" id="color" value="#000000"></label>
+      </div>
+      <div class="dialog-actions">
+        <button type="button" onclick="document.getElementById('post-dialog').close()">キャンセル</button>
+        <button type="button" id="submitButton" onclick="document.getElementById('submitButton').click()">投稿</button>
+      </div>
+    </form>
+  </dialog>
 <div id="login-section">
   <div class="flex">
   <div class="error">ログインしていません</div>
